@@ -8,12 +8,13 @@ if not exist node_modules\express (
 )
 
 echo.
-echo   Memberi pautan internet untuk semua perangkat...
-echo   (perlukan internet + cloudflared. Ctrl+C untuk berhenti.)
+echo  Memberikan pautan internet untuk semua perangkat...
+echo  Perlu: internet + cloudflared.
+echo  Jangan tutup tetingkap ini selama majlis.
 echo.
 
 node online.js
 
 echo.
-echo   Siap. Pautan online telah ditutup.
+echo  Siap. Pautan online telah ditutup (salinan terakhir ada dalam pautan-online.txt).
 pause

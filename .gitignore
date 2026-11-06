@@ -28,6 +28,10 @@ desktop.ini
 .env
 .env.*
 
+# Rahsia & pautan tempatan — jangan naik ke GitHub
+kunci.txt
+pautan-online.txt
+
 # Editor
 .vscode/
 .idea/

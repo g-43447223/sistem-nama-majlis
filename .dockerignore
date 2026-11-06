@@ -4,6 +4,8 @@ npm-debug.log
 .gitignore
 data
 public/uploads
+kunci.txt
+pautan-online.txt
 *.md
 Dockerfile
 .dockerignore

@@ -23,11 +23,19 @@ Semua data disimpan di dalam laptop. Sistem ini berjalan pada rangkaian tempatan
 
 **Pilihan B — satu arahan, dapat pautan internet untuk semua perangkat**
 
-1. Dobel-klik **`pautan-online.bat`** (perlukan internet + `cloudflared`).
+1. Dobel-klik **`pautan-online.bat`** (atau `npm run online`) — perlukan internet + `cloudflared`.
 2. Tetingkap memaparkan pautan seperti `https://xxxx.trycloudflare.com/display.html`
-   serta **kunci majlis** (dijana automatik jika `MAJLIS_KUNCI` tidak ditetapkan).
-3. Beri pautan itu kepada setiap perangkat. Buka `.../` di laptop projektor, lalu
-   imbas QR pada skrin untuk menghantar telefon ke halaman pengimbas.
+   dan **kunci majlis**. Kunci dijana sekali lalu disimpan dalam **`kunci.txt`**, jadi
+   ia kekal sama setiap kali anda mulakan semula.
+3. Semua pautan turut ditulis ke **`pautan-online.txt`** — cetak atau lekat di meja kaunter.
+4. **Admin → Kehadiran → “Pautan kaunter untuk perangkat lain”** memaparkan **kod QR**:
+   cikgu imbas sahaja dengan kamera telefon, terus masuk halaman daftar hadir
+   (kunci sudah ditampal automatik pada pautan itu).
+5. Jika terowong terputus tengah majlis, `online.js` membuka semula automatik dan
+   mencetak **PAUTAN BARU** (kunci tetap sama). Pautan tunnel boleh berubah bila
+   ia dibuka semula — itu sebabnya guna QR dari panel Admin, jangan tulis tangan.
+6. Projektor melalui pautan internet akan menerima nama dalam **~1–3 saat**
+   (lihat nota teknikal tentang hampiran `/api/papan`); pada LAN/`hotspot` lebih kurang **50 ms**.
 
 **Pilihan C — hosting tetap** (Render/Railway/Fly/VPS): lihat **13. Naik ke hosting**.
 URL kekal, HTTPS asli, tiada tetingkap terminal perlu dibiarkan terbuka.
@@ -180,6 +188,28 @@ Amaran sijil hanya perlu diterima **sekali** pada setiap telefon.
 
 Kebanyakan scanner barcode bertindak seperti papan kekunci. Cukup buka halaman **Pengimbas**,
 letakkan kursor pada medan kod, dan imbas. Kod akan dihantar bersama `Enter`.
+
+### 5.1 Kawasan sekolah luas — perangkat tidak berada pada Wi-Fi yang sama
+
+Pilih mengikut jarak & kemudahan rangkaian:
+
+| Keadaan | Cara | Pautan yang dibuka |
+|---|---|---|
+| Semua dalam julat Wi-Fi sekolah yang sama | **LAN** (`mula.bat`) | `http://<IP-laptop>/scan.html?mod=daftar` |
+| Kaunter jauh, Wi-Fi sekolah tak sampai / **AP isolation** | **Hotspot Windows** pada laptop | `http://192.168.137.1/scan.html?mod=daftar` |
+| Kawasan luas, perangkat guna **4G/Maxis sendiri** | **`pautan-online.bat`** | `https://xxxx.trycloudflare.com/scan.html?mod=daftar&kunci=<kunci>` |
+| Nak URL tetap sepanjang tahun | **Hosting** (Render/Railway/VPS) | `https://nama-anda.onrender.com/scan.html?mod=daftar` |
+
+Uji hotspot: **Settings → Network & internet → Mobile hotspot → On**, kemudian
+`ipconfig | findstr 192.168.137` di laptop. Kalau keluar `192.168.137.1`, semua perangkat
+yang join hotspot itu boleh buka `http://192.168.137.1/scan.html?mod=daftar`
+(tanpa internet langsung, jarak lebih kurang 15–30 m).
+
+> **Privasi:** dalam mod online, senarai murid hanya boleh dibaca oleh pihak yang
+> memegang `MAJLIS_KUNCI`. Pastikan pautan Admin tidak disebarkan ke khalayak —
+> yang diedarkan ke kaunter ialah pautan **pengimbas/daftar hadir** sahaja
+> (QR di panel Admin sudah mengandungi kunci). Untuk data pelajar sebenar,ikut
+> kelulusan pentadbiran sekolah/JPN sebelum mana-mana perkhidmatan awam digunakan.
 
 ---
 

@@ -973,6 +973,12 @@
     const fon = tampalKunci(u.kaunterFon || `${u.kamera}?mod=daftar`);
     const laptop = tampalKunci(u.kaunter);
     const tanpaProtokol = (t) => t.replace(/^https?:\/\//, '');
+    /* Pada mod online, kedua-dua pautan sama (https sahaja) — papar satu kad saja. */
+    const sama = fon === laptop;
+    const kadLaptop = $('#kadLaptopKaunter');
+    if (kadLaptop) kadLaptop.classList.toggle('hidden', sama);
+    const tajukFon = $('#tajukFonKaunter');
+    if (tajukFon) tajukFon.textContent = sama ? 'Telefon atau laptop' : 'Telefon — guna kamera';
 
     const qrFon = $('#kaunterQrFon');
     const qrLaptop = $('#kaunterQrLaptop');
