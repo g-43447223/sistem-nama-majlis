@@ -4,7 +4,10 @@ const path = require('node:path');
 const fs = require('node:fs');
 const { DatabaseSync } = require('node:sqlite');
 
-const DATA_DIR = path.join(__dirname, 'data');
+/* DATA_DIR boleh dipindah ke volum kekal pada hosting (Render/Fly/Railway). */
+const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.join(__dirname, 'data');
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new DatabaseSync(path.join(DATA_DIR, 'majlis.db'));
@@ -259,6 +262,7 @@ seed();
 
 module.exports = {
   db,
+  DATA_DIR,
   DEFAULT_SETTINGS,
   getSettings,
   setSettings,

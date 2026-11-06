@@ -1,0 +1,28 @@
+# Blueprint Render — https://render.com
+# 1. Push repo ini ke GitHub.
+# 2. Di Render: New + → Blueprint → pilih repo ini.
+# 3. Isi MAJLIS_KUNCI (wajib) dan PUBLIC_URL (domain yang diberikan Render).
+# 4. Deployment akan mencipta volum kekal /data untuk pangkalan data + gambar.
+#
+# Pelan percuma Render tidak menyokong volum kekal dan akan "tidur",
+# jadi gunakan pelan Starter ke atas untuk majlis sebenar.
+
+services:
+  - type: web
+    name: sistem-nama-majlis
+    runtime: docker
+    plan: starter
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: MAJLIS_KUNCI
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
+    disk:
+      - name: majlis-data
+        mountPath: /data
+        sizeGB: 1

@@ -377,3 +377,80 @@ sistem nama majlis/
   hanya mod `papar` menghasilkan peristiwa SSE `reveal`.
 - Statistik menyertakan `hadir`, `daftar`, `dipapar` dan pecahan per kelas untuk
   ketiga-tiganya.
+
+---
+
+## 13. Naik ke hosting (boleh digunakan dari mana-mana)
+
+Sistem ini boleh dijalankan pada pelayan internet, bukan hanya laptop. GitHub hanya
+menyimpan kod — untuk online, perlukan pelayan yang menjalankan Node secara berterusan.
+Repo ini sudah disertakan `Dockerfile` dan `render.yaml` untuk tujuan itu.
+
+### Langkah di Render (paling mudah)
+
+1. Push kod ke GitHub (repo ini sudah dibuat: `g-43447223/sistem-nama-majlis`).
+2. Di [render.com](https://render.com) → **New + → Blueprint** → pilih repo.
+3. Render akan membaca `render.yaml` dan mencipta servis Docker + **volum kekal `/data`**.
+4. Isi dua `Environment Key`:
+   - `MAJLIS_KUNCI` — kata laluan sistem (**wajib**, jika tidak sesiapa boleh ubah data)
+   - `PUBLIC_URL` — contoh `https://sistem-nama-majlis.onrender.com`
+5. Deploy. Buka `https://<domain>/admin.html`, masukkan kunci, muat naik senarai murid,
+   dan gunakan `https://<domain>/scan.html?kunci=<kunci>` pada telefon kaunter/pengimbas.
+6. Guna pelan **Starter ke atas** — pelan percuma tidak menyokong volum dan akan
+   “tidur” (putus sambungan SSE ketika majlis berlangsung).
+
+Alternatif lain: Railway, Fly.io, atau VPS (Node 24 + Nginx sebagai TLS). Mana-mana
+platform yang boleh menjalankan Node 24 dan mempunyai storan kekal adalah memadai.
+
+### Pemboleh ubah sekitar
+
+| Pemboleh ubah | Lalai | Kegunaan |
+|---|---|---|
+| `PORT` | `3000` | Port pelayan (platform biasanya tetapkan) |
+| `HTTPS_PORT` | `3443` | Port sijil sendiri untuk kamera LAN; `0` untuk matikan |
+| `DATA_DIR` | `data/` | Lokasi `majlis.db` — **mesti pada volum kekal** |
+| `UPLOAD_DIR` | `public/uploads` | Gambar murid, background, logo |
+| `PUBLIC_URL` | — | Alamat awam penuh (dipakai untuk pautan & QR pada halaman utama) |
+| `MAJLIS_KUNCI` | — | Kunci majlis; kosong = mod lokal tanpa kawalan |
+| `AWAN` | auto | `1` untuk mod hosting (langgar sijil sendiri, pautan ikut header permintaan) |
+
+### Apa yang dilindungi oleh `MAJLIS_KUNCI`
+
+Terlindung: menambah/sunting/memadam murid, import CSV, muat naik gambar & logo,
+mengubah tetapan, mod demo, memadam rekod kehadiran, senarai penuh murid, dan gambar
+kad QR.
+
+Terbuka (supaya majlis berjalan lancar): halaman paparan, sambungan langsung paparan,
+`/api/health`, dan avatar janaan. **Imbasan kad memerlukan kunci** — sebab itu
+pautan kaunter sebaiknya dihantar sebagai `?kunci=...`.
+
+Kunci disimpan dalam pelayar peranti tersebut (dan sebagai cookie selepas dimasukkan),
+jadi setiap telefon/laptop hanya perlu sekali. Gunakan pautan:
+
+```
+https://<domain>/scan.html?kunci=<MAJLIS_KUNCI>          # mod paparan nama
+https://<domain>/scan.html?mod=daftar&kunci=<MAJLIS_KUNCI>  # mod kaunter
+```
+
+### Pertimbangan sebelum online
+
+- **Ketersediaan:** jika internet sekolah putus, majlis berhenti mengimbas. Laptop
+  sebagai pelayan (mod LAN) tidak bergantung pada internet — inilah sebab utama
+  sistem ini dibina untuk rangkaian tempatan.
+- **Privasi data murid:** menyimpan nama + gambar murid pada pelayan awam biasanya
+  memerlukan kelulusan pentadbir sekolah/JPN. Jika dibenarkan, pastikan `MAJLIS_KUNCI`
+  kuat, domain HTTPS, dan buat sandaran `data/` secara berkala.
+- **Peranti banyak:** setiap pelayar had ~6 sambungan ke satu domain; satu pelayan
+  hosting mampu melayani banyak perangkat berasingan.
+
+### Repositori GitHub
+
+```bash
+git init -b main
+git add .
+git commit -m "Sistem Nama Majlis"
+gh repo create sistem-nama-majlis --public --source=. --remote=origin --push
+```
+
+`data/`, `public/uploads/`, `node_modules/` dan `*.pem` sentiasa dikecualikan oleh
+`.gitignore` — gambar murid, pangkalan data dan kunci HTTPS tidak akan naik ke GitHub.

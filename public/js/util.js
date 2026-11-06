@@ -15,12 +15,30 @@ async function api(path, options = {}) {
   const opts = { ...options };
   opts.headers = { ...(options.headers || {}) };
 
+  const kunci = kunciSaya();
+  if (kunci) opts.headers['x-majlis-kunci'] = kunci;
+
   if (opts.body && !(opts.body instanceof FormData)) {
     opts.headers['Content-Type'] = 'application/json';
     if (typeof opts.body !== 'string') opts.body = JSON.stringify(opts.body);
   }
 
-  const res = await fetch(path, opts);
+  let res = await fetch(path, opts);
+
+  /* Jika kunci diperlukan tetapi belum dimasukkan / sudah luput, tanya sekali. */
+  if (res.status === 401 && options.tanyaKunci !== false) {
+    let tubuh = null;
+    try {
+      tubuh = await res.clone().json();
+    } catch {
+      tubuh = null;
+    }
+    if (tubuh && tubuh.perluKunci && mintaKunci()) {
+      opts.headers['x-majlis-kunci'] = kunciSaya();
+      res = await fetch(path, opts);
+    }
+  }
+
   const type = res.headers.get('content-type') || '';
   const data = type.includes('application/json') ? await res.json() : await res.text();
 
@@ -33,6 +51,70 @@ async function api(path, options = {}) {
   }
   return data;
 }
+
+/* ---------------------------------------------------------------
+   Kunci majlis — diperlukan apabila sistem dihostingkan online.
+   --------------------------------------------------------------- */
+
+const KUNCI_KUNCI = 'majlis.kunci';
+
+function kunciSaya() {
+  try {
+    return window.localStorage.getItem(KUNCI_KUNCI) || '';
+  } catch {
+    return '';
+  }
+}
+
+function simpanKunci(nilai) {
+  try {
+    if (nilai) window.localStorage.setItem(KUNCI_KUNCI, String(nilai));
+    else window.localStorage.removeItem(KUNCI_KUNCI);
+  } catch {
+    /* mod privasi pelayar */
+  }
+}
+
+function mintaKunci() {
+  const jawab = window.prompt(
+    'Sistem ini dilindungi kunci majlis.\n\nMasukkan kunci yang diberikan oleh guru sistem:'
+  );
+  if (!jawab) return '';
+  const bersih = String(jawab).trim();
+  if (!bersih) return '';
+  simpanKunci(bersih);
+  bukaKuasa(bersih);
+  return bersih;
+}
+
+/* Simpan juga sebagai cookie supaya permintaan gambar (QR kad) diterima. */
+async function bukaKuasa(nilai) {
+  try {
+    await fetch('/api/buka-kuasa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kunci: nilai }),
+      credentials: 'same-origin',
+    });
+  } catch {
+    /*-abai */
+  }
+}
+
+/* Kunci boleh dihantar melalui pautan: /scan.html?kunci=...  (untuk kaunter) */
+(async function terimaKunciDariPautan() {
+  try {
+    const url = new URL(window.location.href);
+    const nilai = url.searchParams.get('kunci');
+    if (!nilai) return;
+    simpanKunci(nilai);
+    await bukaKuasa(nilai);
+    url.searchParams.delete('kunci');
+    window.history.replaceState(null, '', url);
+  } catch {
+    /* pelayar lama */
+  }
+})();
 
 function toast(message, kind = '') {
   let host = document.getElementById('toast');
@@ -135,4 +217,4 @@ function debounce(fn, wait = 200) {
   };
 }
 
-window.UI = { $, $$, esc, api, toast, initials, fmtTime, beep, ensureAudio, debounce };
+window.UI = { $, $$, esc, api, toast, initials, fmtTime, beep, ensureAudio, debounce, kunciSaya, simpanKunci, mintaKunci };

@@ -5,7 +5,15 @@
 
   try {
     const info = await api('/api/bootstrap');
-    const students = await api('/api/students');
+
+    /* Senarai nama mungkin dilindungi kunci majlis — halaman utama tidak
+       perlu memintanya, cukup papar ringkasan. */
+    let roster = { students: [] };
+    try {
+      roster = await api('/api/students', { tanyaKunci: false });
+    } catch {
+      /* tiada akses pratonton nama */
+    }
 
     document.getElementById('namaSekolah').textContent = info.settings.nama_sekolah;
     document.getElementById('previewSekolah').textContent = info.settings.nama_sekolah;
@@ -41,9 +49,14 @@
       events.addEventListener('reset', liveStats);
     }
 
-    document.getElementById('lanUrl').textContent = info.urls.pengimbas.replace(/^https?:\/\//, '');
+    /* Sertakan kunci (jika peranti ini sudah menyimpannya) supaya pautan/QR
+       terus boleh digunakan tanpa menaip semula. */
+    const kunciSimpanan = window.UI.kunciSaya ? window.UI.kunciSaya() : '';
+    const pautanImbas = info.urls.pengimbas + (kunciSimpanan ? `?kunci=${encodeURIComponent(kunciSimpanan)}` : '');
+
+    document.getElementById('lanUrl').textContent = pautanImbas.replace(/^https?:\/\//, '');
     document.getElementById('scanQr').src =
-      '/api/qr-link?size=180&url=' + encodeURIComponent(info.urls.pengimbas);
+      '/api/qr-link?size=180&url=' + encodeURIComponent(pautanImbas);
 
     const hadirEl = document.getElementById('previewHadir');
     hadirEl.textContent = `Kehadiran ${info.hadir} / ${info.total}`;
@@ -52,7 +65,7 @@
       .toLocaleDateString('ms-MY', { day: '2-digit', month: 'short', year: 'numeric' })
       .toUpperCase();
 
-    const list = (students.students || []).filter((s) => s.nama);
+    const list = (roster.students || []).filter((s) => s.nama);
     if (list.length) {
       const picks = [...list].sort(() => Math.random() - 0.5).slice(0, 4);
       let index = 0;

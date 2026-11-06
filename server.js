@@ -16,9 +16,26 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const HTTPS_PORT = Number(process.env.HTTPS_PORT) || 3443;
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const UPLOAD_DIR = path.join(PUBLIC_DIR, 'uploads');
+
+/* Pada hosting, volum kekal biasanya di luar folder aplikasi. */
+const UPLOAD_DIR = process.env.UPLOAD_DIR
+  ? path.resolve(process.env.UPLOAD_DIR)
+  : path.join(PUBLIC_DIR, 'uploads');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
+/* Platform (Render/Fly/Railway/VPS ber-Nginx) mengurus HTTPS sendiri. */
+const CLOUD =
+  String(process.env.AWAN || '') === '1' ||
+  Boolean(process.env.RENDER) ||
+  Boolean(process.env.FLY_APP_NAME) ||
+  Boolean(process.env.RAILWAY_ENVIRONMENT) ||
+  Boolean(process.env.KUBERNETES_SERVICE_HOST);
+
+/* Kunci majlis. Jika ditetapkan, semua endpoint API (kecuali yang dinyatakan
+   awam) memerlukan kunci ini — wajib diisi apabila sistem online. */
+const KUNCI = String(process.env.MAJLIS_KUNCI || '').trim();
+
+app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -230,24 +247,120 @@ function buildScanPayload(student, extras = {}) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Kawalan akses — perlu diisi apabila sistem berada di internet      */
+/* ------------------------------------------------------------------ */
+
+const LALUAN_AWAM = [
+  /^\/api\/health$/,
+  /^\/api\/bootstrap$/,
+  /^\/api\/events$/,
+  /^\/api\/kuasa$/,
+  /^\/api\/buka-kuasa$/,
+  /^\/api\/avatar\/[^/]+$/,
+  /^\/api\/qr-link$/,
+];
+
+function kunciSama(sempena, ikatan) {
+  const a = Buffer.from(String(sempena));
+  const b = Buffer.from(String(ikatan));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+function ambilKunci(req) {
+  const daripadaHeader = req.get('x-majlis-kunci');
+  if (daripadaHeader) return String(daripadaHeader).trim();
+  const cookie = String(req.headers.cookie || '').match(/(?:^|;\s*)majlis_kunci=([^;]+)/);
+  if (cookie) {
+    try {
+      return decodeURIComponent(cookie[1]);
+    } catch {
+      return '';
+    }
+  }
+  return req.query.kunci ? String(req.query.kunci).trim() : '';
+}
+
+app.use('/api', (req, res, next) => {
+  if (!KUNCI) return next(); /* mod lokal (laptop + Wi-Fi sekolah): terbuka */
+
+  const laluan = `/api${req.path === '/' ? '' : req.path}`;
+  if (LALUAN_AWAM.some((pattern) => pattern.test(laluan))) return next();
+
+  const nilai = ambilKunci(req);
+  if (nilai && kunciSama(nilai, KUNCI)) return next();
+
+  return res.status(401).json({ error: 'Kunci majlis diperlukan.', perluKunci: true });
+});
+
+app.post('/api/buka-kuasa', (req, res) => {
+  const nilai = String((req.body && req.body.kunci) || '').trim();
+  if (!KUNCI) return res.json({ ok: true, perluKunci: false });
+  if (!nilai || !kunciSama(nilai, KUNCI)) {
+    return res.status(401).json({ error: 'Kunci salah.', perluKunci: true });
+  }
+  const selamat = req.secure || req.get('x-forwarded-proto') === 'https';
+  res.setHeader(
+    'Set-Cookie',
+    `majlis_kunci=${encodeURIComponent(nilai)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${selamat ? '; Secure' : ''}`
+  );
+  res.json({ ok: true, perluKunci: true });
+});
+
+app.get('/api/kuasa', (_req, res) => {
+  res.json({ perluKunci: Boolean(KUNCI) });
+});
+
+app.get('/api/health', (_req, res) => {
+  const stats = store.stats();
+  res.json({
+    ok: true,
+    versi: require('./package.json').version,
+    mod: KUNCI ? 'online' : 'lokal',
+    murid: stats.total,
+    hadir: stats.hadir,
+    daftar: stats.daftar,
+    dipapar: stats.dipapar,
+    sambungan: sseClients.size,
+    masa: new Date().toISOString(),
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /*  Maklumat asas                                                      */
 /* ------------------------------------------------------------------ */
+
+/* Alamat yang dilihat peranti: pada hosting guna header permintaan,
+   bukan IP laptop. */
+function alamatAsas(req) {
+  const tersurat = String(process.env.PUBLIC_URL || '').trim();
+  if (tersurat) return tersurat.replace(/\/+$/, '');
+  const host = req.get('x-forwarded-host') || req.get('host') || `${lanAddress()}:${PORT}`;
+  const proto = req.get('x-forwarded-proto') || (req.secure ? 'https' : 'http');
+  return `${proto}://${host}`;
+}
 
 app.get('/api/bootstrap', (req, res) => {
   const settings = store.getSettings();
   const lan = lanAddress();
-  const base = `http://${lan}:${PORT}`;
+  const asas = CLOUD ? alamatAsas(req) : `http://${lan}:${PORT}`;
+  const kamera = CLOUD ? asas : `https://${lan}:${HTTPS_PORT}`;
+
   res.json({
     settings,
     ...store.stats(),
     lan,
     port: PORT,
+    mod: KUNCI ? 'online' : 'lokal',
+    perluKunci: Boolean(KUNCI),
     urls: {
-      paparan: `${base}/display.html`,
-      pengimbas: `${base}/scan.html`,
-      kamera: `https://${lan}:${HTTPS_PORT}/scan.html`,
-      admin: `${base}/admin.html`,
-      kad: `${base}/qr.html`,
+      asas,
+      paparan: `${asas}/display.html`,
+      pengimbas: `${asas}/scan.html`,
+      kaunter: `${asas}/scan.html?mod=daftar`,
+      kamera: `${kamera}/scan.html`,
+      admin: `${asas}/admin.html`,
+      kad: `${asas}/qr.html`,
       lokal: `http://localhost:${PORT}`,
       lokalKamera: `https://localhost:${HTTPS_PORT}/scan.html`,
     },
@@ -794,6 +907,9 @@ app.get('/api/avatar/:id', (req, res) => {
 /*  Statik                                                             */
 /* ------------------------------------------------------------------ */
 
+/* Folder muat naik boleh berada di volum berasingan pada hosting. */
+app.use('/uploads', express.static(UPLOAD_DIR, { maxAge: 0, etag: true }));
+
 app.use(
   express.static(PUBLIC_DIR, {
     extensions: ['html'],
@@ -893,6 +1009,21 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log('  SISTEM NAMA MAJLIS');
   console.log('  ------------------');
+
+  if (CLOUD) {
+    const asas = process.env.PUBLIC_URL || `http://localhost:${PORT}`;
+    console.log(`  Mod        : AWAN (hosting)`);
+    console.log(`  Paparan    : ${asas}/display.html`);
+    console.log(`  Pengimbas  : ${asas}/scan.html`);
+    console.log(`  Kaunter    : ${asas}/scan.html?mod=daftar`);
+    console.log(`  Admin      : ${asas}/admin.html`);
+    console.log(`  Keselamatan: ${KUNCI ? 'kunci majlis DIPAKAI' : 'TIADA KUNCI — isi MAJLIS_KUNCI sebelum public'}`);
+    console.log('');
+    console.log('  Data       :', store.DATA_DIR, '|', process.env.UPLOAD_DIR || 'public/uploads');
+    console.log('');
+    return;
+  }
+
   console.log(`  Paparan   : http://localhost:${PORT}/display.html`);
   console.log(`  Pengimbas : http://localhost:${PORT}/scan.html`);
   console.log(`  Admin     : http://localhost:${PORT}/admin.html`);
@@ -900,6 +1031,10 @@ const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('');
   console.log(`  Kamera fon: https://${lan}:${HTTPS_PORT}/scan.html`);
   console.log('              (Terima amaran sijil sekali sahaja pada telefon.)');
+  if (KUNCI) {
+    console.log('');
+    console.log('  Kunci majlis aktif — tambah ?kunci=... pada pautan peranti lain.');
+  }
   console.log('');
   console.log('  Tekan Ctrl+C untuk hentikan pelayan.');
   console.log('');
@@ -907,7 +1042,12 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 
 let httpsServer = null;
 
+/* Pada hosting, TLS diurus platform (Let's Encrypt). Sijil sendiri hanya
+   untuk penggunaan LAN — dan boleh dimatikan dengan HTTPS_PORT=0. */
+const HTTPS_AKTIF = !CLOUD && HTTPS_PORT > 0;
+
 (async function startHttps() {
+  if (!HTTPS_AKTIF) return;
   try {
     const creds = await ensureCerts();
     httpsServer = https.createServer(creds, app);
