@@ -189,7 +189,57 @@ Amaran sijil hanya perlu diterima **sekali** pada setiap telefon.
 Kebanyakan scanner barcode bertindak seperti papan kekunci. Cukup buka halaman **Pengimbas**,
 letakkan kursor pada medan kod, dan imbas. Kod akan dihantar bersama `Enter`.
 
-### 5.1 Kawasan sekolah luas — perangkat tidak berada pada Wi-Fi yang sama
+### 5.1 Langkah penuh — setiap perangkat guna Wi-Fi / data sendiri (4G)
+
+Gunakan ini bila kawasan sekolah luas dan perangkat **tidak** berada pada Wi-Fi yang sama.
+
+**A. Di laptop yang jadi pelayan (1 laptop sahaja)**
+
+1. Pastikan laptop itu ada internet (Wi-Fi sekolah, atau tethering/USB dari telefon).
+2. Dobel-klik **`pautan-online.bat`**.
+3. Tunggu sehingga keluar blok **`PAUTAN ONLINE SIAP`** (lebih kurang 10 saat).
+4. Jangan tutup tetingkap itu sepanjang majlis.
+
+**B. Di laptop projektor**
+
+5. Buka pautan **Paparan (projektor)** yang dicetak di tetingkap itu, contoh:
+   `https://xxxx-yyyy-zzzz.trycloudflare.com/display.html`
+6. Tekan **F11** (skrin penuh). Skrin akan memaparkan logo program + `SELAMAT DATANG`.
+
+**C. Di telefon cikgu kaunter (berbilang telefon boleh serentak)**
+
+7. Buka pautan **Kaunter daftar hadir** (sudah mengandungi `&kunci=`):
+   `https://xxxx-yyyy-zzzz.trycloudflare.com/scan.html?mod=daftar&kunci=<kunci>`
+   — atau lebih senang: di laptop, buka **Admin → Kehadiran**, masukkan kunci,
+   dan biarkan telefon mengimbas **kod QR** yang dipaparkan di situ.
+8. Dalam halaman itu tekan **Buka kamera fon**, kemudian **Benarkan (Allow)** akses kamera.
+9. Imbas kad murid satu persatu. Papan keputusan menunjukkan **DIDAFTAR** dan
+   kiraan hadir bertambah — **nama tidak keluar di projektor**.
+
+**D. Semasa majlis (nama perlu keluar di skrin)**
+
+10. Pada peranti yang mengimbas untuk majlis, buka pautan **Pengimbas majlis**
+    (atau tukar suis di bahagian atas halaman pengimbas kepada **Paparan nama**).
+11. Imbas kad yang sama → nama murid terpapar di projektor (lewat sedikit melalui
+    internet, lebih kurang 1–3 saat; pada LAN dalam ~0.05 saat).
+
+**E. Selepas majlis**
+
+12. **Admin → Kehadiran → Muat turun CSV** (lajur *Daftar kaunter* & *Dipaparkan*),
+    atau **Hantar ke Sheets** jika cermin Google Sheets sudah dipasang.
+
+**Kalau pautan tidak dibuka / nama tidak keluar**
+
+- Pastikan tetingkap `pautan-online.bat` masih terbuka, dan laptop itu masih ada internet.
+- Teringat: pautan **bertukar** apabila terowong dimulakan semula — ambil pautan/QR
+  terkini dari tetingkap itu atau dari fail **`pautan-online.txt`**.
+- Kunci majlis tersimpan dalam **`kunci.txt`** (kekal antara mulakan).
+- Telefon yang pernah memasukkan kunci tidak perlu menaip lagi; jika ditolak, buka
+  `.../admin.html` atau pautan ber`&kunci=` sekali sahaja.
+- Satu laptop hanya layak ~6 tab pelayan (had pelayar); sebarkan perangkat ke
+  beberapa laptop/telefon, bukan banyak tab pada satu mesin.
+
+### 5.2 Pilih cara ikut jarak — LAN / hotspot / 4G / hosting
 
 Pilih mengikut jarak & kemudahan rangkaian:
 
