@@ -49,9 +49,9 @@
       events.addEventListener('reset', liveStats);
     }
 
-    /* Sertakan kunci (jika peranti ini sudah menyimpannya) supaya pautan/QR
-       terus boleh digunakan tanpa menaip semula. */
-    const kunciSimpanan = window.UI.kunciSaya ? window.UI.kunciSaya() : '';
+    /* Kunci hanya ditampal pada pautan jika pelayan memang memintanya
+       (mod hosting). Mod lokal tidak memerlukannya. */
+    const kunciSimpanan = info.perluKunci && window.UI.kunciSaya ? window.UI.kunciSaya() : '';
     const pautanImbas = info.urls.pengimbas + (kunciSimpanan ? `?kunci=${encodeURIComponent(kunciSimpanan)}` : '');
 
     document.getElementById('lanUrl').textContent = pautanImbas.replace(/^https?:\/\//, '');
