@@ -771,6 +771,18 @@ app.delete('/api/attendance', (req, res) => {
   res.json({ ok: true, ...store.stats() });
 });
 
+/* Reset seorang murid — kad boleh dipaparkan semula (contoh: tersalah
+   imbas semasa latihan atau sebelum giliran). */
+app.delete('/api/attendance/:id', (req, res) => {
+  const student = store.getStudentById(req.params.id);
+  if (!student) return res.status(404).json({ error: 'Murid tidak dijumpai.' });
+
+  const dibuang = store.clearAttendanceFor(student.id);
+  sendEvent('stats', store.stats());
+  sendEvent('students', { reason: 'reset-seorang', ...store.stats() });
+  res.json({ ok: true, dibuang, murid: publicStudent(student), ...store.stats() });
+});
+
 /* ------------------------------------------------------------------ */
 /*  Cermin Google Sheets (hantar & ulangi automatik)                   */
 /* ------------------------------------------------------------------ */
@@ -870,7 +882,7 @@ async function sheetsSirap({ senyap = true } = {}) {
     }
     return { ok: true, dihantar: buang, menunggu: baki, diterima: json.diterima };
   } catch (err) {
-    const sebab = err && err.name === 'AbortError' ? 'Tamiat masa tamat' : err.message;
+    const sebab = err && err.name === 'AbortError' ? 'Tempoh tamat (sambungan lambat)' : err.message;
     try {
       store.sheetsTandaiGagal(store.sheetsBelumHantar(SHEETS_BATAS).map((b) => b.id));
     } catch {
@@ -923,6 +935,50 @@ app.post('/api/sheets/uji', async (_req, res) => {
       http: r.status,
       respons: json || teks.slice(0, 220),
     });
+  } catch (err) {
+    return res.json({ ok: false, error: err.message });
+  }
+});
+
+/* Padam baris rehearsal dalam Google Sheet ( header dikekalkan ).
+   Ini tidak memadam rekod dalam laptop — itu ada butangnya sendiri. */
+app.post('/api/sheets/kosongkan', async (_req, res) => {
+  const settings = store.getSettings();
+  const url = String(settings.sheets_url || '').trim();
+  if (!url || !sheetsUrlSah(url)) {
+    return res.status(400).json({ error: 'Tiada URL Google Sheets diatur.' });
+  }
+  try {
+    const penutup = new AbortController();
+    const tamat = setTimeout(() => penutup.abort(), 15000);
+    let r;
+    try {
+      r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          perintah: 'kosongkan',
+          sumber: 'Sistem Nama Majlis',
+          kunci: String(settings.sheets_kunci || ''),
+        }),
+        signal: penutup.signal,
+        redirect: 'follow',
+      });
+    } finally {
+      clearTimeout(tamat);
+    }
+    const teks = await r.text();
+    let json = null;
+    try {
+      json = JSON.parse(teks);
+    } catch {
+      /* bukan JSON */
+    }
+    if (!r.ok || !json || json.ok !== true) {
+      const sebab = (json && json.error) || `HTTP ${r.status}`;
+      return res.json({ ok: false, error: sebab });
+    }
+    return res.json({ ok: true, dipadam: json.dipadam || 0 });
   } catch (err) {
     return res.json({ ok: false, error: err.message });
   }

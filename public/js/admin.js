@@ -409,8 +409,10 @@
       if (data.sheets) {
         const tunggu = $('#sheetsTunggu');
         const btn = $('#sheetsKehadiran');
+        const kosong = $('#sheetsKosong');
         if (tunggu) tunggu.textContent = data.sheets.menunggu;
         if (btn) btn.classList.toggle('hidden', !data.sheets.diatur);
+        if (kosong) kosong.classList.toggle('hidden', !data.sheets.diatur);
       }
 
       if (!state.students.length) await loadStudents();
@@ -480,10 +482,36 @@
           <td class="kod-cell">${esc(row.student.kod)}</td>
           <td>${masa(row.daftarLabel, row.daftarSource)}</td>
           <td>${masa(row.paparLabel, row.paparSource)}</td>
+          <td>${
+            row.daftarLabel || row.paparLabel
+              ? `<button class="icon-btn" type="button" data-reset="${esc(row.student.id)}" title="Kosongkan rekod murid ini supaya kad boleh dipaparkan semula">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8" /><path d="M3 3v5h5" /></svg>
+                </button>`
+              : '<span class="muted">—</span>'
+          }</td>
         </tr>`
       )
       .join('');
   }
+
+  /* Reset rekod seorang murid (kad boleh dipakai semula) */
+  $('#attendanceBody').addEventListener('click', async (event) => {
+    const btn = event.target.closest('[data-reset]');
+    if (!btn) return;
+
+    const id = btn.dataset.reset;
+    const jumpa = peringkatRows().find((r) => r.student.id === id);
+    const nama = jumpa ? jumpa.student.nama : 'murid ini';
+    if (!window.confirm(`Kosongkan rekod "${nama}"?\n\nKad murid ini boleh didaftarkan dan dipaparkan semula.`)) return;
+
+    try {
+      await api('/api/attendance/' + encodeURIComponent(id), { method: 'DELETE' });
+      toast(`Rekod ${nama} dibersihkan.`, 'ok');
+      await loadAttendance();
+    } catch (err) {
+      toast(err.message, 'bad');
+    }
+  });
 
   $('#filterPeringkat').addEventListener('change', (event) => {
     state.filterPeringkat = event.target.value;
@@ -497,7 +525,11 @@
 
   $('#btnResetAttendance').addEventListener('click', async () => {
     const ok = window.confirm(
-      'Kosongkan SEMUA rekod kehadiran?\n\nSemua nama boleh diimbas semula selepas ini. Tindakan ini tidak boleh dibatalkan.'
+      'Kosongkan SEMUA rekod kehadiran?\n\n' +
+        'Semua nama boleh didaftarkan dan dipaparkan semula — ini yang perlu dibuat selepas sesi latihan.\n' +
+        'Skir projektor akan dikosongkan serta-merta pada semua perangkat.\n\n' +
+        'Google Sheet TIDAK diurus (guna butang “Kosongkan Google Sheets” jika perlu).\n' +
+        'Tindakan ini tidak boleh dibatalkan.'
     );
     if (!ok) return;
 
@@ -830,6 +862,32 @@
 
   $('#sheetsHantar').addEventListener('click', () => sheetsHantar(true));
   $('#sheetsKehadiran').addEventListener('click', () => sheetsHantar(false));
+
+  $('#sheetsKosong').addEventListener('click', async () => {
+    if (
+      !window.confirm(
+        'Kosongkan SEMUA baris dalam Google Sheet (kecuali baris tajuk)?\n\n' +
+          'Rekod dalam laptop TIDAK dipadam. Guna ini selepas latihan.'
+      )
+    )
+      return;
+
+    sheetsStatusText('Memadam baris dalam Google Sheets…');
+    try {
+      const hasil = await api('/api/sheets/kosongkan', { method: 'POST' });
+      if (hasil.ok) {
+        sheetsStatusText(`Sheet dikosongkan (${hasil.dipadam || 0} baris dipadam).`, 'ok');
+        toast('Google Sheets sudah dikosongkan.', 'ok');
+      } else {
+        const sebab = hasil.error || 'Sheet menolak permintaan.';
+        sheetsStatusText(`Gagal: ${sebab}`, 'bad');
+        toast(`Gagal mengosongkan Sheets: ${sebab}`, 'bad');
+      }
+    } catch (err) {
+      sheetsStatusText(`Gagal: ${err.message}`, 'bad');
+      toast(err.message, 'bad');
+    }
+  });
 
   // Saiz logo dihantar serta-merta — tidak perlu tekan "Simpan Tetapan".
   $('#setLogoSaiz').addEventListener('change', async (event) => {

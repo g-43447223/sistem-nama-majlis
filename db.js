@@ -277,6 +277,13 @@ function clearAttendance() {
   db.prepare('DELETE FROM sheets_queue').run();
 }
 
+/* Reset seorang murid sahaja (contoh: kad tersalah imbas semasa latihan). */
+function clearAttendanceFor(studentId) {
+  const changes = db.prepare('DELETE FROM attendance WHERE student_id = ?').run(studentId).changes;
+  db.prepare('DELETE FROM sheets_queue WHERE kod = (SELECT kod FROM students WHERE id = ?)').run(studentId);
+  return changes;
+}
+
 /* ------------------------------------------------------------------
    Baris gilir cermin Google Sheets
    ------------------------------------------------------------------ */
@@ -335,6 +342,7 @@ module.exports = {
   getAttendanceFor,
   markAttendance,
   clearAttendance,
+  clearAttendanceFor,
   sheetsEnqueue,
   sheetsBelumHantar,
   sheetsBuang,

@@ -82,6 +82,18 @@ function doPost(e) {
 
   if (!sheetsKunciSah_(data)) return keluaran({ ok: false, error: 'Kunci tidak sepadan' });
 
+  /* Perintah khas: kosongkan baris latihan (baris tajuk dikekalkan). */
+  if (data.perintah === 'kosongkan') {
+    const sheetKosong = sheetsPersediaan_();
+    const terakhir = sheetKosong.getLastRow();
+    let dipadam = 0;
+    if (terakhir > 1) {
+      dipadam = terakhir - 1;
+      sheetKosong.deleteRows(2, dipadam);
+    }
+    return keluaran({ ok: true, dipadam });
+  }
+
   const baris = Array.isArray(data.baris) ? data.baris : [];
   if (!baris.length) return keluaran({ ok: true, diterima: 0, dilangkau: 0 });
 

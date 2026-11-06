@@ -375,7 +375,26 @@ Kad QR yang sama digunakan untuk dua perkara berasingan:
   **masih boleh** dipaparkan namanya semasa majlis, dan sebaliknya.
 - **Muat turun CSV** menyertakan kedua-dua peringkat:
   `Bil, Nama, Kelas, Kod, Status, Daftar hadir, Sumber daftar, Dipaparkan, Sumber papar`.
-- **Kosongkan Rekod** memadam kedua-dua peringkat (guna selepas sesi latihan).
+- **Kosongkan Rekod** memadam kedua-dua peringkat (daftar + papar) dalam **laptop** —
+  inilah yang dibuat **selepas sesi latihan**, supaya semua kad boleh dipaparkan semula.
+  Skrin projektor pada semua perangkat terus kosong (peristiwa `reset` dihantar automatik).
+- Reset **seorang murid** juga boleh: di jadual Kehadiran ada lajur **Tindakan** →
+  tekan ikon **pusing-balik (reset)** pada baris murid itu sahaja. Berguna kalau kad
+  tersalah imbas, atau murid sudah imbas tetapi namanya belum sempat keluar.
+- Google Sheet **tidak** ikut kosong. Untuk itu tekan **Kosongkan Google Sheets**
+  (memadam semua baris data dalam sheet, baris tajuk dikekalkan; rekod laptop tidak diusik).
+- Cadangan selepas latihan: **Kosongkan Rekod** → **Kosongkan Google Sheets** (jika guna
+  cermin) → imbas satu kad ujian untuk pastikan nama keluar semula → **Kosongkan Rekod** sekali
+  lagi sebelum majlis benar-benar bermula.
+
+### 8.1 API reset (untuk kegunaan pantas)
+
+| Tindakan | Cara |
+|---|---|
+| Kosongkan semua rekod | Admin → Kehadiran → **Kosongkan Rekod** (`DELETE /api/attendance`) |
+| Reset seorang murid | butang reset pada baris murid (`DELETE /api/attendance/:id`) |
+| Kosongkan Sheet | Admin → Kehadiran → **Kosongkan Google Sheets** (`POST /api/sheets/kosongkan`) |
+| Semak sebelum reset | penapis *Sudah dipaparkan* / *Daftar kaunter sahaja* di jadual Kehadiran |
 
 ---
 
