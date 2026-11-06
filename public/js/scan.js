@@ -504,8 +504,21 @@
 
   function connectEvents() {
     const source = new EventSource('/api/events');
+    let cubaSemula = null;
 
-    source.addEventListener('open', () => setOnline(true));
+    source.addEventListener('open', () => {
+      setOnline(true);
+      clearTimeout(cubaSemula);
+    });
+
+    source.addEventListener('error', () => {
+      setOnline(false);
+      /* Pelayar ada kalanya berhenti mencuba semula — paksa sambungan baru. */
+      clearTimeout(cubaSemula);
+      cubaSemula = setTimeout(() => {
+        if (source.readyState === EventSource.CLOSED) connectEvents();
+      }, 3000);
+    });
 
     source.addEventListener('stats', (event) => {
       try {
@@ -534,8 +547,6 @@
         /* ignore */
       }
     });
-
-    source.addEventListener('error', () => setOnline(false));
   }
 
   /* ---------------------------------------------------------------- */

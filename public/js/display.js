@@ -379,6 +379,7 @@
   /* ---------------------------------------------------------------- */
 
   let source = null;
+  let sambungSemula = null;
 
   function connect() {
     if (source) source.close();
@@ -434,12 +435,24 @@
 
     source.addEventListener('error', () => {
       conn.classList.add('on');
+      /* Pelayar kadangkala menyerah mencuba semula (contohnya selepas pelayan
+         dimulakan semula atau tab pernah tidur). Paksa sambungan baru. */
+      clearTimeout(sambungSemula);
+      sambungSemula = setTimeout(() => {
+        if (!source || source.readyState === EventSource.CLOSED) connect();
+      }, 3000);
     });
 
     source.addEventListener('open', () => {
       conn.classList.remove('on');
+      clearTimeout(sambungSemula);
     });
   }
+
+  /* Peninjau: pastikan paparan sentiasa bersambung walaupun tab ditinggalkan. */
+  setInterval(() => {
+    if (!source || source.readyState === EventSource.CLOSED) connect();
+  }, 10000);
 
   /* ---------------------------------------------------------------- */
   /*  Mula                                                             */

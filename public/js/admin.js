@@ -826,6 +826,17 @@
 
   function connectEvents() {
     const source = new EventSource('/api/events');
+    let cubaSemula = null;
+
+    const mulaTunggu = () => {
+      clearTimeout(cubaSemula);
+      cubaSemula = setTimeout(() => {
+        if (source.readyState === EventSource.CLOSED) connectEvents();
+      }, 3000);
+    };
+
+    source.addEventListener('open', () => clearTimeout(cubaSemula));
+    source.addEventListener('error', mulaTunggu);
 
     source.addEventListener('stats', (event) => {
       try {
