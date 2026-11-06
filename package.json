@@ -1,0 +1,18 @@
+{
+  "name": "sistem-nama-majlis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistem paparan nama murid majlis - imbas QR, nama, kelas dan gambar terpampang di skrin",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "jsqr": "^1.4.0",
+    "multer": "^2.0.2",
+    "qrcode": "^1.5.4",
+    "selfsigned": "^5.5.0"
+  }
+}

@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="ms">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin — Sistem Nama Majlis</title>
+    <meta name="theme-color" content="#08111f" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/admin.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230b1b33'/%3E%3Cpath d='M16 6l2.6 6.3H25l-5.2 4.1 2 6.6-5.8-3.8-5.8 3.8 2-6.6L7 10.3h6.4z' fill='%23d8b45f'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body class="page admin">
+    <div class="admin-shell">
+      <aside class="sidebar">
+        <a class="side-brand" href="/">
+          <span class="crest">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+              <path d="M12 3l2.2 5.1 5.5.5-4.2 3.7 1.3 5.4L12 14.8 7.2 17.7l1.3-5.4L4.3 8.6l5.5-.5L12 3z" />
+              <path d="M5 20h14" stroke-linecap="round" />
+            </svg>
+          </span>
+          <div>
+            <b>Sistem Nama Majlis</b>
+            <small>Panel Admin</small>
+          </div>
+        </a>
+
+        <nav class="side-nav">
+          <button class="side-link active" data-tab="murid" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /><path d="M16 4.5a3.2 3.2 0 010 6.2M17.5 14.2c2.1.7 3.5 2.6 3.5 4.8" /></svg>
+            Murid
+            <span class="count" id="navMuridCount">0</span>
+          </button>
+          <button class="side-link" data-tab="kehadiran" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
+            Kehadiran
+            <span class="count" id="navHadirCount">0</span>
+          </button>
+          <button class="side-link" data-tab="kad" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM21 14h-2M14 21h3M21 21h-3" /></svg>
+            Kad QR
+          </button>
+          <button class="side-link" data-tab="tetapan" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" /></svg>
+            Tetapan
+          </button>
+          <button class="side-link" data-tab="demo" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M8 5v14l11-7z" /></svg>
+            Mod Demo
+          </button>
+        </nav>
+
+        <div class="side-foot">
+          <div class="side-stat"><span>Hadir</span><b id="sideHadir">0 / 0</b></div>
+          <a class="side-link side-external" href="/display.html" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M8 20h8M12 16v4" /></svg>
+            Buka Skrin Paparan
+          </a>
+        </div>
+      </aside>
+
+      <main class="main">
+        <!-- MURID ---------------------------------------------------- -->
+        <section class="tab-section active" id="tab-murid">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">Data Murid</p>
+              <h1>Senarai murid &amp; kad QR</h1>
+              <p>Urus nama, kelas, kod QR dan gambar murid. Setiap murid mempunyai satu kod unik.</p>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <label class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              <input id="searchMurid" class="input" type="search" placeholder="Cari nama, kod atau kelas…" />
+            </label>
+            <select id="filterKelas" class="select" aria-label="Tapis kelas">
+              <option value="">Semua kelas</option>
+            </select>
+            <button class="btn" type="button" id="btnImport">Import CSV</button>
+            <label class="btn file-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+              Gambar pukal
+              <input type="file" id="bulkPhotos" accept="image/*" multiple />
+            </label>
+            <button class="btn btn-gold" type="button" id="btnAdd">+ Tambah Murid</button>
+          </div>
+
+          <div class="import-panel hidden" id="importPanel">
+            <h4>Import senarai murid (CSV)</h4>
+            <p>
+              Baris pertama mesti tajuk: <code>nama,kelas,kod</code>. Lajur <code>kod</code> boleh
+              ditinggalkan — sistem akan jana kod automatik. Contoh:
+            </p>
+            <textarea id="csvText" spellcheck="false" placeholder="nama,kelas,kod&#10;Ahmad Zafran,6 AMANAH,NM26-0031&#10;Nur Aisyah,6 AMANAH,"></textarea>
+            <div class="import-actions">
+              <label class="btn btn-sm file-label">
+                Pilih fail CSV
+                <input type="file" id="csvFile" accept=".csv,text/csv" />
+              </label>
+              <button class="btn btn-sm btn-gold" type="button" id="btnImportRun">Import ke sistem</button>
+              <button class="btn btn-sm btn-ghost" type="button" id="btnTemplate">Muat turun templat</button>
+              <span class="muted" id="importStatus" style="font-size: 0.8rem"></span>
+            </div>
+            <p style="margin-top: 12px">
+              Gambar pukal: nama fail gambar mesti sama dengan kod murid, contoh
+              <code>NM26-0001.jpg</code>.
+            </p>
+          </div>
+
+          <div class="table-wrap panel">
+            <table class="data">
+              <thead>
+                <tr>
+                  <th>Murid</th>
+                  <th>Kelas</th>
+                  <th>Kod QR</th>
+                  <th>Status</th>
+                  <th style="text-align: right">Tindakan</th>
+                </tr>
+              </thead>
+              <tbody id="studentsBody"></tbody>
+            </table>
+            <div class="empty-state hidden" id="studentsEmpty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="8" r="3.2" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" /></svg>
+              <b>Tiada murid dijumpai</b>
+              <p>Cuba tukar carian, atau tambah murid baharu.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- KEHADIRAN ------------------------------------------------ -->
+        <section class="tab-section" id="tab-kehadiran">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">Kehadiran</p>
+              <h1>Daftar hadir &amp; rekod imbasan</h1>
+              <p>
+                Dua peringkat guna kad QR yang sama: <b>daftar hadir</b> di kaunter (tiada paparan
+                skrin) dan <b>imbasan majlis</b> yang menampakkan nama di projektor.
+              </p>
+            </div>
+            <div class="page-actions">
+              <a class="btn btn-gold" href="/scan.html?mod=daftar" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 8V6a2 2 0 012-2h2M20 8V6a2 2 0 00-2-2h-2M4 16v2a2 2 0 002 2h2M20 16v2a2 2 0 01-2 2h-2M4 12h16" /></svg>
+                Buka Kaunter Daftar Hadir
+              </a>
+              <a class="btn" href="/api/attendance.csv">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 4v12M7 11l5 5 5-5" /><path d="M4 20h16" /></svg>
+                Muat turun CSV
+              </a>
+              <button class="btn btn-danger" type="button" id="btnResetAttendance">Kosongkan Rekod</button>
+            </div>
+          </div>
+
+          <div class="stat-grid">
+            <div class="stat-card"><b id="aTotal">0</b><span>Jumlah murid</span></div>
+            <div class="stat-card ok"><b id="aDaftar">0</b><span>Daftar di kaunter</span></div>
+            <div class="stat-card gold"><b id="aPapar">0</b><span>Dipaparkan</span></div>
+            <div class="stat-card warn"><b id="aBelum">0</b><span>Belum diimbas</span></div>
+            <div class="stat-card"><b id="aPeratus">0%</b><span>Peratus hadir</span></div>
+          </div>
+
+          <div class="panel panel-pad" style="margin-bottom: 18px">
+            <div class="panel-title">Kehadiran mengikut kelas</div>
+            <div class="class-list" id="classBreakdown"></div>
+          </div>
+
+          <div class="toolbar">
+            <label class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              <input id="searchAttendance" class="input" type="search" placeholder="Cari nama, kelas atau kod…" />
+            </label>
+            <select id="filterPeringkat" class="select">
+              <option value="">Semua rekod</option>
+              <option value="belum">Belum diimbas langsung</option>
+              <option value="daftar">Daftar kaunter sahaja (belum dipaparkan)</option>
+              <option value="papar">Sudah dipaparkan</option>
+            </select>
+          </div>
+
+          <div class="table-wrap panel">
+            <table class="data">
+              <thead>
+                <tr>
+                  <th>Murid</th>
+                  <th>Kelas</th>
+                  <th>Kod</th>
+                  <th>Daftar kaunter</th>
+                  <th>Dipaparkan</th>
+                </tr>
+              </thead>
+              <tbody id="attendanceBody"></tbody>
+            </table>
+            <div class="empty-state hidden" id="attendanceEmpty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
+              <b>Tiada rekod mengikut penapis ini</b>
+              <p>Imbasan di kaunter atau semasa majlis akan muncul di sini.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- KAD QR --------------------------------------------------- -->
+        <section class="tab-section" id="tab-kad">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">Kad QR</p>
+              <h1>Cetak kad murid</h1>
+              <p>Setiap kad mengandungi kod QR unik. Cetak dan edarkan kepada murid sebelum majlis.</p>
+            </div>
+          </div>
+
+          <div class="qr-toolbar">
+            <select id="qrKelas" class="select" aria-label="Pilih kelas">
+              <option value="">Semua kelas</option>
+            </select>
+            <button class="btn btn-gold" type="button" id="btnPrintQr">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2" /><rect x="6" y="14" width="12" height="7" /></svg>
+              Buka halaman cetak
+            </button>
+            <span class="muted" id="qrCount" style="font-size: 0.8rem"></span>
+          </div>
+
+          <div class="panel panel-pad" style="margin-bottom: 18px">
+            <p class="muted" style="font-size: 0.84rem; line-height: 1.7">
+              Halaman cetak akan dibuka dalam tab baharu. Pilih <b>Cetak</b> pada pelayar — susun
+              atur kad (2 lajur × 4 baris) sudah dikonfigurasi untuk kertas A4. Untuk hasil terbaik,
+              gunakan kertas tebal 160gsm dan potong mengikut garis panduan.
+            </p>
+          </div>
+
+          <div class="qr-preview-grid" id="qrPreview"></div>
+        </section>
+
+        <!-- TETAPAN -------------------------------------------------- -->
+        <section class="tab-section" id="tab-tetapan">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">Tetapan</p>
+              <h1>Tetapan majlis</h1>
+              <p>Perubahan tetapan akan terus dihantar ke skrin paparan yang sedang dibuka.</p>
+            </div>
+          </div>
+
+          <form id="settingsForm">
+            <div class="settings-grid">
+              <div class="panel setting-block">
+                <h4>Maklumat majlis</h4>
+                <div class="field">
+                  <label for="setTajuk">Tajuk majlis</label>
+                  <input id="setTajuk" name="tajuk_majlis" class="input" />
+                </div>
+                <div class="field">
+                  <label for="setSubtajuk">Subtajuk / sesi</label>
+                  <input id="setSubtajuk" name="subtajuk" class="input" />
+                </div>
+                <div class="field">
+                  <label for="setSekolah">Nama sekolah</label>
+                  <input id="setSekolah" name="nama_sekolah" class="input" />
+                </div>
+                <div class="field">
+                  <label for="setCap">Teks kecil penjuru (pilihan)</label>
+                  <input
+                    id="setCap"
+                    name="cap_penjuru"
+                    class="input"
+                    placeholder="Kosongkan — nama majlis sahaja yang dipaparkan"
+                  />
+                  <small class="muted">Baris kecil di bawah nama sekolah pada skrin paparan.</small>
+                </div>
+              </div>
+
+              <div class="panel setting-block">
+                <h4>Paparan</h4>
+                <div class="field">
+                  <label for="setTempoh">Tempoh paparan setiap murid</label>
+                  <select id="setTempoh" name="tempoh_paparan" class="select">
+                    <option value="3">3 saat</option>
+                    <option value="4">4 saat</option>
+                    <option value="5">5 saat</option>
+                    <option value="6">6 saat</option>
+                    <option value="8">8 saat</option>
+                    <option value="10">10 saat</option>
+                    <option value="12">12 saat</option>
+                    <option value="15">15 saat</option>
+                    <option value="20">20 saat</option>
+                    <option value="30">30 saat</option>
+                  </select>
+                </div>
+
+                <div class="switch-row">
+                  <div class="switch-copy">
+                    <b>Bunyi sambutan</b>
+                    <small>Mainkan bunyi lembut apabila nama muncul.</small>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setBunyi" name="bunyi" />
+                    <span></span>
+                  </label>
+                </div>
+
+                <div class="switch-row">
+                  <div class="switch-copy">
+                    <b>Papar kiraan kehadiran</b>
+                    <small>Tunjukkan jumlah hadir di bahagian bawah skrin.</small>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setKehadiran" name="papar_kehadiran" />
+                    <span></span>
+                  </label>
+                </div>
+
+                <div class="switch-row">
+                  <div class="switch-copy">
+                    <b>Mod formal paparan</b>
+                    <small>
+                      Sembunyi butang bunyi, tulisan “menunggu imbasan” dan kiraan giliran daripada
+                      skrin projektor. Gerakkan tetikus untuk memaparkan butang kendalian sebentar.
+                    </small>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setFormal" name="mod_formal" />
+                    <span></span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="panel setting-block wide">
+                <h4>Background skrin paparan</h4>
+                <div class="bg-preview" id="bgPreview">Belum ada background</div>
+                <div class="bg-actions">
+                  <label class="btn file-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+                    Muat naik background
+                    <input type="file" id="bgUpload" accept="image/*" />
+                  </label>
+                  <button class="btn btn-ghost" type="button" id="bgReset">Guna latar lalai</button>
+                  <span class="muted" style="font-size: 0.78rem">Saiz disyorkan: 1920 × 1080 (landskap).</span>
+                </div>
+              </div>
+
+              <div class="panel setting-block wide">
+                <h4>Logo program (tengah skrin menunggu)</h4>
+                <div class="field">
+                  <label for="setLogoSaiz">Saiz logo di ruang tengah</label>
+                  <select id="setLogoSaiz" name="logo_saiz" class="select">
+                    <option value="sederhana">Sederhana</option>
+                    <option value="besar">Besar</option>
+                    <option value="penuh">Penuhi ruang tengah</option>
+                  </select>
+                </div>
+                <div class="logo-preview" id="logoPreview">
+                  <img id="logoPreviewImg" alt="Logo program" />
+                  <span class="logo-preview-text" id="logoPreviewText">Belum ada logo — emblem bintang digunakan</span>
+                </div>
+                <div class="bg-actions">
+                  <label class="btn file-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+                    Muat naik logo program
+                    <input type="file" id="logoUpload" accept="image/*" />
+                  </label>
+                  <button class="btn btn-ghost" type="button" id="logoReset">Guna emblem lalai</button>
+                  <span class="muted" style="font-size: 0.78rem">
+                    Logo program muncul di tengah paparan selepas nama murid selesai ditunjukkan. Guna PNG / WEBP berlatar lutsinar.
+                  </span>
+                </div>
+              </div>
+
+              <div class="panel setting-block wide">
+                <h4>Logo sekolah (penjuru atas kiri)</h4>
+                <div class="crest-preview" id="crestPreview">
+                  <img id="crestPreviewImg" alt="Logo sekolah" />
+                  <span class="crest-preview-text" id="crestPreviewText">Belum ada logo sekolah</span>
+                </div>
+                <div class="bg-actions">
+                  <label class="btn file-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
+                    Muat naik logo sekolah
+                    <input type="file" id="crestUpload" accept="image/*" />
+                  </label>
+                  <button class="btn btn-ghost" type="button" id="crestReset">Guna emblem lalai</button>
+                  <span class="muted" style="font-size: 0.78rem">
+                    Diletak di penjuru atas kiri skrin paparan, di sebelah nama sekolah. Fail berlatar lutsinar paling sesuai.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top: 22px; display: flex; gap: 10px; justify-content: flex-end">
+              <button class="btn btn-gold" type="submit" id="btnSaveSettings">Simpan Tetapan</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- DEMO ----------------------------------------------------- -->
+        <section class="tab-section" id="tab-demo">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">Mod Demo</p>
+              <h1>Uji paparan</h1>
+              <p>Papar nama murid pada skrin tanpa mengira kehadiran. Sesuai untuk ujian sebelum majlis.</p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-gold" type="button" id="btnRandomDemo">Papar Murid Rawak</button>
+            </div>
+          </div>
+
+          <div class="panel panel-pad" style="margin-bottom: 18px">
+            <p class="muted" style="font-size: 0.84rem; line-height: 1.7">
+              Mod demo tidak merekod kehadiran dan tidak menjejaskan statistik sebenar. Pastikan
+              skrin paparan dibuka di tab lain untuk melihat hasilnya.
+            </p>
+          </div>
+
+          <label class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            <input id="searchDemo" class="input" type="search" placeholder="Cari murid untuk didemokan…" />
+          </label>
+
+          <div class="demo-list" id="demoList"></div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Modal murid -------------------------------------------------- -->
+    <dialog class="modal" id="studentModal">
+      <form id="studentForm">
+        <div class="modal-head">
+          <h3 id="studentModalTitle">Tambah murid</h3>
+          <button class="icon-btn" type="button" id="studentModalClose" aria-label="Tutup">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="studentId" />
+          <div class="field">
+            <label for="studentNama">Nama penuh</label>
+            <input id="studentNama" class="input" required placeholder="cth. Ahmad Zafran bin Ismail" />
+          </div>
+          <div class="field">
+            <label for="studentKelas">Kelas</label>
+            <input id="studentKelas" class="input" required list="kelasList" placeholder="cth. 6 AMANAH" />
+            <datalist id="kelasList"></datalist>
+          </div>
+          <div class="field">
+            <label for="studentKod">Kod QR (pilihan)</label>
+            <input id="studentKod" class="input" placeholder="Kosongkan untuk jana automatik" />
+            <small class="muted" style="font-size: 0.75rem">Kod ini akan dicetak sebagai QR. Biarkan kosong untuk kod automatik.</small>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-ghost" type="button" id="studentCancel">Batal</button>
+          <button class="btn btn-gold" type="submit" id="studentSave">Simpan</button>
+        </div>
+      </form>
+    </dialog>
+
+    <input type="file" id="photoInput" accept="image/*" class="hidden" />
+    <div id="toast"></div>
+
+    <script src="/js/util.js"></script>
+    <script src="/js/admin.js"></script>
+  </body>
+</html>

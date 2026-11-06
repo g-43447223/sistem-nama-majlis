@@ -1,0 +1,33 @@
+# Pakej
+node_modules/
+
+# Data sebenar sekolah — JANGAN naik ke GitHub
+data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Gambar yang dimuat naik (logo, background, gambar murid)
+public/uploads/
+
+# Sijil & kunci HTTPS
+*.pem
+*.key
+*.crt
+
+# Log & fail sementara
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Persekitaran
+.env
+.env.*
+
+# Editor
+.vscode/
+.idea/

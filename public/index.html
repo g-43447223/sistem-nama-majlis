@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ms">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sistem Nama Majlis — Paparan Nama Murid</title>
+    <meta name="theme-color" content="#08111f" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/landing.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230b1b33'/%3E%3Cpath d='M16 6l2.6 6.3H25l-5.2 4.1 2 6.6-5.8-3.8-5.8 3.8 2-6.6L7 10.3h6.4z' fill='%23d8b45f'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body class="page">
+    <header class="topbar">
+      <a class="brand" href="/">
+        <span class="crest">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+            <path d="M12 3l2.2 5.1 5.5.5-4.2 3.7 1.3 5.4L12 14.8 7.2 17.7l1.3-5.4L4.3 8.6l5.5-.5L12 3z" />
+            <path d="M5 20h14" stroke-linecap="round" />
+          </svg>
+        </span>
+        <span>
+          <b>Sistem Nama Majlis</b>
+          <small id="namaSekolah">Sekolah Kebangsaan Pulau Indah 2</small>
+        </span>
+      </a>
+      <nav>
+        <span class="live"><i></i> Pelayan aktif</span>
+        <a class="btn btn-ghost btn-sm" href="/admin.html">Admin</a>
+      </nav>
+    </header>
+
+    <main class="site">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Paparan Majlis Murid</p>
+          <h1>Nama mereka,<br /><em>di pentas kehormatan.</em></h1>
+          <p class="lede">
+            Imbas kad QR murid — nama, kelas dan gambar terus terpampang di skrin majlis.
+            Cikgu hanya perlu scan; sistem uruskan animasi, kehadiran dan giliran.
+          </p>
+          <div class="cta">
+            <a href="/display.html" class="btn btn-gold">Buka Paparan</a>
+            <a href="/scan.html" class="btn">Mula Imbas</a>
+          </div>
+          <div class="statbar">
+            <div><b id="statHadir">0</b><span>hadir</span></div>
+            <i></i>
+            <div><b id="statTotal">0</b><span>murid</span></div>
+            <i></i>
+            <div><b id="statKelas">0</b><span>kelas</span></div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="screen" aria-hidden="true">
+            <div class="screen-top">
+              <span class="mini-crest">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 5.7 6.1.5-4.6 4.1 1.4 6L12 15l-5.3 3.3 1.4-6L3.5 8.2l6.1-.5L12 2z" /></svg>
+              </span>
+              <span id="previewSekolah">SK Pulau Indah 2</span>
+            </div>
+            <div class="screen-photo"><span id="previewInitials">AZ</span></div>
+            <p class="screen-hi">Tahniah</p>
+            <h2 id="previewNama">Ahmad Zafran bin Ismail</h2>
+            <p class="screen-kelas" id="previewKelas">6 Amanah</p>
+            <div class="screen-foot">
+              <span id="previewHadir">Kehadiran 0 / 0</span>
+              <span id="previewTarikh">06 NOV 2026</span>
+            </div>
+          </div>
+
+          <div class="qr-float">
+            <img id="scanQr" alt="QR untuk buka pengimbas di telefon" width="62" height="62" />
+            <div>
+              <b>Buka pengimbas di fon</b>
+              <small id="lanUrl">http://192.168.0.43:3000</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="actions">
+        <a class="action" href="/display.html">
+          <span class="a-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <rect x="3" y="4" width="18" height="12" rx="2" />
+              <path d="M8 20h8M12 16v4" />
+            </svg>
+          </span>
+          <h3>Skrin Paparan</h3>
+          <p>
+            Untuk laptop yang disambung ke projektor. Nama murid muncul besar dengan gambar,
+            kelas dan background majlis. Antara imbasan, logo program dipenuhi di ruang tengah,
+            dengan logo sekolah di penjuru atas kiri — tanpa butang atau tulisan kawalan.
+          </p>
+          <span class="a-link">Buka paparan <em>→</em></span>
+        </a>
+
+        <a class="action" href="/scan.html">
+          <span class="a-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <path d="M4 8V5a1 1 0 011-1h3M20 8V5a1 1 0 00-1-1h-3M4 16v3a1 1 0 001 1h3M20 16v3a1 1 0 01-1 1h-3" />
+              <path d="M4 12h16" />
+            </svg>
+          </span>
+          <h3>Pengimbas</h3>
+          <p>
+            Guna mesin scanner USB atau kamera telefon. Ada dua mod: <b>Paparan nama</b> untuk
+            majlis, dan <b>Daftar hadir sahaja</b> untuk kaunter tanpa paparan di skrin.
+          </p>
+          <span class="a-link">Mula imbas <em>→</em></span>
+        </a>
+
+        <a class="action" href="/admin.html">
+          <span class="a-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" />
+            </svg>
+          </span>
+          <h3>Admin</h3>
+          <p>
+            Urus senarai murid, gambar, kehadiran dan tetapan majlis. Cetak kad QR untuk
+            diedarkan kepada murid.
+          </p>
+          <span class="a-link">Buka admin <em>→</em></span>
+        </a>
+      </section>
+
+      <section class="how">
+        <div class="how-head">
+          <p class="eyebrow">Cara guna</p>
+          <h2>Empat langkah, dari kad QR ke pentas.</h2>
+        </div>
+        <ol>
+          <li>
+            <b>01</b>
+            <div>
+              <h4>Muat naik senarai murid</h4>
+              <p>Import fail CSV atau tambah satu-satu dalam Admin, sertakan gambar murid.</p>
+            </div>
+          </li>
+          <li>
+            <b>02</b>
+            <div>
+              <h4>Cetak kad QR</h4>
+              <p>Setiap murid mempunyai satu kod unik. Cetak kad dan edarkan sebelum majlis.</p>
+            </div>
+          </li>
+          <li>
+            <b>03</b>
+            <div>
+              <h4>Daftar hadir di kaunter</h4>
+              <p>
+                Sebelum majlis, buka
+                <a class="gold" href="/scan.html?mod=daftar">Kaunter Daftar Hadir</a> dan imbas kad
+                murid yang tiba — kehadiran direkod, nama <b>tidak</b> keluar di skrin.
+              </p>
+            </div>
+          </li>
+          <li>
+            <b>04</b>
+            <div>
+              <h4>Imbas semula semasa majlis</h4>
+              <p>
+                Tukar ke mod <b>Paparan nama</b>. Kad yang sama akan menampakkan nama murid di
+                skrin projektor, walaupun sudah daftar di kaunter.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span><b>Sistem Nama Majlis</b> — berjalan pada rangkaian tempatan. Data tersimpan di laptop ini.</span>
+      <span id="footerTajuk">Majlis Apresiasi Murid Cemerlang</span>
+    </footer>
+
+    <script src="/js/util.js"></script>
+    <script src="/js/landing.js"></script>
+  </body>
+</html>

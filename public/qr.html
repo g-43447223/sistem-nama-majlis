@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ms">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cetak Kad QR — Sistem Nama Majlis</title>
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/qr.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%230b1b33'/%3E%3Cpath d='M16 6l2.6 6.3H25l-5.2 4.1 2 6.6-5.8-3.8-5.8 3.8 2-6.6L7 10.3h6.4z' fill='%23d8b45f'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body class="qr-page">
+    <header class="qr-top">
+      <div class="left">
+        <div>
+          <h1>Kad QR Murid</h1>
+          <small id="qrSubtitle">Sistem Nama Majlis</small>
+        </div>
+      </div>
+      <div class="actions">
+        <select id="qrClassFilter" class="select" aria-label="Pilih kelas">
+          <option value="">Semua kelas</option>
+        </select>
+        <span class="muted" id="qrSummary" style="font-size: 0.8rem"></span>
+        <button class="btn btn-gold" type="button" id="qrPrint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2" /><rect x="6" y="14" width="12" height="7" /></svg>
+          Cetak
+        </button>
+        <a class="btn btn-ghost" href="/admin.html#kad">Kembali</a>
+      </div>
+    </header>
+
+    <p class="qr-note">
+      Pilih kelas, kemudian tekan <b>Cetak</b>. Gunakan kertas A4 (8 kad setiap halaman), skala 100%,
+      dan pastikan “Background graphics” dihidupkan.
+    </p>
+
+    <div class="sheet" id="sheet">
+      <div class="qgrid" id="qgrid"></div>
+      <div class="qr-empty hidden" id="qrEmpty">Tiada murid untuk kelas ini.</div>
+    </div>
+
+    <div id="toast"></div>
+    <script src="/js/util.js"></script>
+    <script src="/js/qr.js"></script>
+  </body>
+</html>
