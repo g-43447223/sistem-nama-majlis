@@ -12,18 +12,40 @@ Semua data disimpan di dalam laptop. Sistem ini berjalan pada rangkaian tempatan
 
 ## 1. Mula pantas
 
-1. Pasang **Node.js 22.5 atau lebih baru** (https://nodejs.org).
+**Pilihan A — laptop jadi pelayan (paling senang, tiada internet diperlukan)**
+
+1. Pasang **Node.js 22.5 atau lebih baru** (https://nodejs.org) — sekali sahaja.
 2. Dobel-klik **`mula.bat`**.
-3. Pelayar akan terbuka di `http://localhost:3000`.
+3. Pelayar terbuka di `http://localhost` (port **80**, jadi tiada nombor port perlu ditaip;
+   kamera telefon di `https://<IP-laptop>` pada port 443).
+4. Pada halaman itu ada **kod QR** — telefon pada Wi-Fi yang sama terus membuka
+   halaman pengimbas dengan sekali imbas QR, tanpa menaip.
+
+**Pilihan B — satu arahan, dapat pautan internet untuk semua perangkat**
+
+1. Dobel-klik **`pautan-online.bat`** (perlukan internet + `cloudflared`).
+2. Tetingkap memaparkan pautan seperti `https://xxxx.trycloudflare.com/display.html`
+   serta **kunci majlis** (dijana automatik jika `MAJLIS_KUNCI` tidak ditetapkan).
+3. Beri pautan itu kepada setiap perangkat. Buka `.../` di laptop projektor, lalu
+   imbas QR pada skrin untuk menghantar telefon ke halaman pengimbas.
+
+**Pilihan C — hosting tetap** (Render/Railway/Fly/VPS): lihat **13. Naik ke hosting**.
+URL kekal, HTTPS asli, tiada tetingkap terminal perlu dibiarkan terbuka.
 
 Atau melalui terminal:
 
 ```bash
 npm install
-npm start
+npm start          # LAN, port 80
+npm run online     # LAN + pautan internet melalui cloudflared
 ```
 
-Untuk hentikan pelayan: tekan `Ctrl + C` dalam tetingkap terminal, atau tutup tetingkap `mula.bat`.
+Untuk hentikan pelayan: tekan `Ctrl + C` dalam tetingkap terminal, atau tutup
+tetingkap `mula.bat` / `pautan-online.bat`.
+
+> **URL GitHub bukan untuk dibuka oleh perangkat** — ia hanya gudang kod.
+> Yang digunakan telefon/laptop ialah pautan Pilihan A, B atau C di atas.
+> GitHub berguna untuk simpan/berkongsi kod, atau untuk `git clone` ke laptop ganti.
 
 ---
 
@@ -123,16 +145,22 @@ kelas, kod QR dan nama majlis. Potong ikut garis kad.
 ## 5. Kamera telefon
 
 Kamera pada telefon memerlukan sambungan **HTTPS**. Sistem menyediakan ini secara automatik
-pada port **3443**.
+pada port **443** (port 3443 jika `HTTPS_PORT` diubah atau port 443 occupied).
+
+**Cara paling senang (tanpa menaip):** buka halaman utama di laptop projektor,
+biarkan telefon mengimbas **kod QR** yang dipaparkan di situ — telefon terus membuka
+halaman pengimbas.
+
+Jika perlu menaip:
 
 1. Pastikan telefon dan laptop berada pada **Wi-Fi yang sama**.
 2. Di telefon, buka:
 
    ```
-   https://<IP-laptop>:3443/scan.html
+   https://<IP-laptop>/scan.html
    ```
 
-   Contoh: `https://192.168.0.41:3443/scan.html` — IP sebenar dipaparkan semasa pelayan
+   Contoh: `https://192.168.0.41/scan.html` — IP sebenar dipaparkan semasa pelayan
    bermula, dan pada halaman utama.
 3. Pelayar akan menunjukkan amaran sijil (kerana sijil dijana sendiri). Tekan
    **Advanced → Proceed** / **Teruskan**.
@@ -142,7 +170,8 @@ pada port **3443**.
 Amaran sijil hanya perlu diterima **sekali** pada setiap telefon.
 
 > Untuk kaunter daftar hadir di telefon, gunakan:
-> `https://192.168.0.41:3443/scan.html?mod=daftar`
+> `https://<IP-laptop>/scan.html?mod=daftar` (tambah `&kunci=<kunci>` jika sistem
+> berjalan dengan `MAJLIS_KUNCI`, contohnya dalam mod online)
 
 > Jika kamera tidak dibuka melalui HTTPS, sistem akan memaparkan mesej dan membuka versi
 > selamat secara automatik.
@@ -437,9 +466,18 @@ sistem nama majlis/
   menggunakan `Content-Type: text/plain` (elak preflight CORS) dan menjangkakan
   respons `{ ok: true, ... }`.
 - **Kunci majlis (`MAJLIS_KUNCI`):** dihantar sebagai header `x-majlis-kunci`, cookie
-  `majlis_kunci`, atau `?kunci=` pada pautan. `GET /api/health`, `GET /api/kuasa`,
-  `GET /api/bootstrap`, `GET /api/events` dan avatar sentiasa awam supaya skrin
-  projektor tidak perlu login.
+  `majlis_kunci`, `?kunci=` pada pautan, atau medan `kunci` dalam badan permintaan.
+  `GET /api/health`, `GET /api/kuasa`, `GET /api/bootstrap`, `GET /api/papan`,
+  `GET /api/events` dan avatar sentiasa awam supaya skrin projektor tidak perlu login.
+- **Hampiran paparan (`GET /api/papan`):** sebahagian terowong/proxy (contohnya
+  cloudflared) menyimpan buffer bagi sambungan berpanjangan, jadi peristiwa SSE
+  tidak sampai ke pelayar. Skrin paparan mengesan “nadi” SSE yang senyap lebih
+  ~1.8 saat dan beralih kepada soal-jawab ringkas `/api/papan?sejak=<ms>` setiap
+  1.2 saat, jadi nama masih keluar (kelewatan ~1–3 saat). Pada rangkaian LAN biasa,
+  SSE berfungsi sepenuhnya dan tiada hampiran digunakan.
+- **`online.js` / `pautan-online.bat`:** melancarkan `server.js` pada port 80 dengan
+  `AWAN=1` + `MAJLIS_KUNCI` (dijana rawak jika tidak diberi) dan membuka terowong
+  `cloudflared` untuk mendapatkan pautan internet sementara.
 
 ---
 

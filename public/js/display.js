@@ -374,6 +374,49 @@
   document.addEventListener('pointerdown', unlockAudio, { once: true });
   document.addEventListener('keydown', unlockAudio, { once: true });
 
+  /* ---------------------------------------------------------------
+     Hampiran gantian: jika sambungan langsung tersumbat (contohnya
+     terowong/proxy yang menyimpan buffer), paparan akan bertanya
+     pelayan setiap 2 saat supaya nama tetap keluar.
+     --------------------------------------------------------------- */
+
+  let nadiSambungan = Date.now();
+  let papanSejak = Date.now();
+  let papanSibuk = false;
+  let tetapanCap = '';
+
+  function tandaHidup() {
+    nadiSambungan = Date.now();
+  }
+
+  async function hirapPapan() {
+    if (papanSibuk) return;
+    papanSibuk = true;
+    try {
+      const data = await api('/api/papan?sejak=' + papanSejak, { tanyaKunci: false });
+      const cap = JSON.stringify(data.settings || {});
+      if (cap !== tetapanCap) {
+        tetapanCap = cap;
+        applySettings(data.settings || {});
+      }
+      applyStats(data);
+      for (const reveal of data.reveal || []) {
+        if (reveal.at > papanSejak) papanSejak = reveal.at;
+        enqueue(reveal);
+      }
+    } catch {
+      /* pelayan belum sedia — cuba lagi pada giliran berikutnya */
+    } finally {
+      papanSibuk = false;
+    }
+  }
+
+  setInterval(() => {
+    /* Guna hampiran bila sambungan langsung diam lebih ~1.8 saat.
+       Pada LAN, SSE sentiasa hidup jadi tiada hampiran diperlukan. */
+    if (Date.now() - nadiSambungan > 1800) hirapPapan();
+  }, 1200);
+
   /* ---------------------------------------------------------------- */
   /*  Sambungan langsung                                               */
   /* ---------------------------------------------------------------- */
@@ -386,52 +429,38 @@
 
     source = new EventSource('/api/events');
 
-    source.addEventListener('hello', () => {
-      conn.classList.remove('on');
+    /* Setiap peristiwa menghidupkan "nadi"; adanya nadi = tidak perlu hirap. */
+    const dengar = (nama, fungsi) => {
+      source.addEventListener(nama, (event) => {
+        tandaHidup();
+        try {
+          fungsi(event && event.data ? JSON.parse(event.data) : {});
+        } catch (err) {
+          if (nama === 'reveal') console.error(err);
+        }
+      });
+    };
+
+    dengar('hello', () => conn.classList.remove('on'));
+
+    dengar('reveal', (data) => {
+      if (data.at) papanSejak = Math.max(papanSejak, data.at);
+      enqueue(data);
     });
 
-    source.addEventListener('reveal', (event) => {
-      try {
-        enqueue(JSON.parse(event.data));
-      } catch (err) {
-        console.error(err);
-      }
-    });
+    dengar('stats', (data) => applyStats(data));
 
-    source.addEventListener('stats', (event) => {
-      try {
-        applyStats(JSON.parse(event.data));
-      } catch {
-        /* ignore */
-      }
-    });
+    dengar('settings', (data) => applySettings(data));
 
-    source.addEventListener('settings', (event) => {
-      try {
-        applySettings(JSON.parse(event.data));
-      } catch {
-        /* ignore */
-      }
-    });
-
-    source.addEventListener('reset', (event) => {
-      try {
-        applyStats(JSON.parse(event.data));
-      } catch {
-        /* ignore */
-      }
+    dengar('reset', (data) => {
+      applyStats(data);
       state.queue = [];
+      papanSejak = Date.now();
       updateQueueBadge();
       if (state.showing) hide();
     });
 
-    source.addEventListener('students', (event) => {
-      try {
-        applyStats(JSON.parse(event.data));
-      } catch {
-        /* ignore */
-      }
-    });
+    dengar('students', (data) => applyStats(data));
 
     source.addEventListener('error', () => {
       conn.classList.add('on');
@@ -445,6 +474,7 @@
 
     source.addEventListener('open', () => {
       conn.classList.remove('on');
+      tandaHidup();
       clearTimeout(sambungSemula);
     });
   }

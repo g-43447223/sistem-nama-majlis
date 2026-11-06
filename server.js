@@ -92,6 +92,30 @@ function removeUpload(webPath) {
 
 const sseClients = new Set();
 
+/* Papan gantian: simpan paparan terkini supaya skrin boleh "_poll" apabila
+   sambungan langsung tersekat (contohnya melalui terowong/proxy yang
+   menyimpan buffered response). */
+const papanTerbaru = [];
+const PAPAN_TAHAP = 120000; /* simpan 2 minit */
+const PAPAN_BILANGAN = 30;
+
+function papanSimpan(payload) {
+  papanTerbaru.push(payload);
+  if (papanTerbaru.length > PAPAN_BILANGAN) papanTerbaru.shift();
+  const had = Date.now() - PAPAN_TAHAP;
+  while (papanTerbaru.length && papanTerbaru[0].at < had) papanTerbaru.shift();
+}
+
+app.get('/api/papan', (req, res) => {
+  const sejak = Number(req.query.sejak) || 0;
+  res.json({
+    settings: store.getSettings(),
+    ...store.stats(),
+    reveal: papanTerbaru.filter((r) => r.at > sejak),
+    masa: Date.now(),
+  });
+});
+
 app.get('/api/events', (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream; charset=utf-8',
@@ -256,6 +280,7 @@ const LALUAN_AWAM = [
   /^\/api\/events$/,
   /^\/api\/kuasa$/,
   /^\/api\/buka-kuasa$/,
+  /^\/api\/papan$/,
   /^\/api\/avatar\/[^/]+$/,
   /^\/api\/qr-link$/,
 ];
@@ -278,7 +303,11 @@ function ambilKunci(req) {
       return '';
     }
   }
-  return req.query.kunci ? String(req.query.kunci).trim() : '';
+  return String(
+    req.query.kunci ||
+      (req.body && req.body.kunci) ||
+      ''
+  ).trim();
 }
 
 app.use('/api', (req, res, next) => {
@@ -340,11 +369,17 @@ function alamatAsas(req) {
   return `${proto}://${host}`;
 }
 
+/* Port lalai tidak perlu ditaip — http://192.168.0.41 sudah cukup. */
+function tampalPort(port, proto) {
+  const lalai = proto === 'https' ? 443 : 80;
+  return Number(port) === lalai ? '' : `:${port}`;
+}
+
 app.get('/api/bootstrap', (req, res) => {
   const settings = store.getSettings();
   const lan = lanAddress();
-  const asas = CLOUD ? alamatAsas(req) : `http://${lan}:${PORT}`;
-  const kamera = CLOUD ? asas : `https://${lan}:${HTTPS_PORT}`;
+  const asas = CLOUD ? alamatAsas(req) : `http://${lan}${tampalPort(PORT, 'http')}`;
+  const kamera = CLOUD ? asas : `https://${lan}${tampalPort(HTTPS_PORT, 'https')}`;
 
   res.json({
     settings,
@@ -361,8 +396,8 @@ app.get('/api/bootstrap', (req, res) => {
       kamera: `${kamera}/scan.html`,
       admin: `${asas}/admin.html`,
       kad: `${asas}/qr.html`,
-      lokal: `http://localhost:${PORT}`,
-      lokalKamera: `https://localhost:${HTTPS_PORT}/scan.html`,
+      lokal: `http://localhost${tampalPort(PORT, 'http')}`,
+      lokalKamera: `https://localhost${tampalPort(HTTPS_PORT, 'https')}/scan.html`,
     },
   });
 });
@@ -650,6 +685,7 @@ app.post('/api/scan', (req, res) => {
   }
 
   const payload = buildScanPayload(student, { source, mod });
+  papanSimpan(payload);
   sendEvent('reveal', payload);
   sendEvent('stats', store.stats());
   res.json({
@@ -943,6 +979,7 @@ app.post('/api/demo', (req, res) => {
   if (!student) return res.status(404).json({ error: 'Murid tidak dijumpai.' });
 
   const payload = buildScanPayload(student, { demo: true, source: 'demo' });
+  papanSimpan(payload);
   sendEvent('reveal', payload);
   res.json({ ok: true, student: publicStudent(student) });
 });
@@ -1253,13 +1290,18 @@ const server = app.listen(PORT, '0.0.0.0', () => {
     return;
   }
 
-  console.log(`  Paparan   : http://localhost:${PORT}/display.html`);
-  console.log(`  Pengimbas : http://localhost:${PORT}/scan.html`);
-  console.log(`  Admin     : http://localhost:${PORT}/admin.html`);
-  console.log(`  Rangkaian : http://${lan}:${PORT}`);
+  const portHttp = tampalPort(PORT, 'http');
+  const portHttps = tampalPort(HTTPS_PORT, 'https');
+  console.log(`  Paparan   : http://localhost${portHttp}/display.html`);
+  console.log(`  Pengimbas : http://localhost${portHttp}/scan.html`);
+  console.log(`  Admin     : http://localhost${portHttp}/admin.html`);
+  console.log(`  Rangkaian : http://${lan}${portHttp}   <- buka ini di perangkat lain`);
   console.log('');
-  console.log(`  Kamera fon: https://${lan}:${HTTPS_PORT}/scan.html`);
+  console.log(`  Kamera fon: https://${lan}${portHttps}/scan.html`);
+  console.log(`              (imbas QR pada http://${lan}${portHttp}/ untuk buka ini di telefon)`);
   console.log('              (Terima amaran sijil sekali sahaja pada telefon.)');
+  console.log('');
+  console.log('  Nak pautan internet untuk semua perangkat? jalan: npm run online');
   if (KUNCI) {
     console.log('');
     console.log('  Kunci majlis aktif — tambah ?kunci=... pada pautan peranti lain.');
