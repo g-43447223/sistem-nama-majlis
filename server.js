@@ -590,6 +590,22 @@ app.post('/api/scan', (req, res) => {
 
   const result = store.markAttendance(student.id, source, mod);
   const rekod = store.getAttendanceFor(student.id);
+
+  /* Cermin Google Sheets: masuk giliran, hantar tanpa menghalang paparan. */
+  if (!result.duplicate) {
+    tambahKeGiliran({
+      kod: student.kod,
+      nama: student.nama,
+      kelas: student.kelas,
+      mod,
+      sumber: source,
+      masa: result.at,
+    });
+    if (String(store.getSettings().sheets_auto) !== '0') {
+      setImmediate(() => sheetsSirap({ senyap: true }).catch(() => {}));
+    }
+  }
+
   const tahap = {
     id: student.id,
     kod: student.kod,
@@ -650,6 +666,11 @@ app.post('/api/scan', (req, res) => {
 app.get('/api/attendance', (req, res) => {
   const rows = store.listAttendance();
   res.json({
+    sheets: {
+      menunggu: store.sheetsMenunggu(),
+      diatur: Boolean(String(store.getSettings().sheets_url || '').trim()),
+      auto: String(store.getSettings().sheets_auto) !== '0',
+    },
     attendance: rows.map((r) => ({
       id: r.id,
       student: publicStudent({ id: r.student_id, kod: r.kod, nama: r.nama, kelas: r.kelas, foto: r.foto }),
@@ -714,6 +735,204 @@ app.delete('/api/attendance', (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
+/*  Cermin Google Sheets (hantar & ulangi automatik)                   */
+/* ------------------------------------------------------------------ */
+
+const SHEETS_TAMAT = 9000; /* ms */
+const SHEETS_BATAS = 50; /* maksimum satu hantaran */
+let sheetsSibuk = false;
+
+function sheetsUrlSah(url) {
+  try {
+    const u = new URL(String(url || '').trim());
+    return u.protocol === 'https:' || u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function tambahKeGiliran({ kod, nama, kelas, mod, sumber, masa }) {
+  try {
+    store.sheetsEnqueue({ kod, nama, kelas, mod, sumber, masa });
+  } catch (err) {
+    console.error('[sheets] gagal memasukkan giliran:', err.message);
+  }
+}
+
+/* Hantar apa yang tergendala ke Apps Script. Dipanggil selepas tiap imbasan
+   dan secara berkala. Kegagalan TIDAK menjejaskan paparan. */
+async function sheetsSirap({ senyap = true } = {}) {
+  const settings = store.getSettings();
+  const url = String(settings.sheets_url || '').trim();
+  if (sheetsSibuk) return { ok: true, diabaikan: 'sedang menghantar' };
+  if (!url || !sheetsUrlSah(url)) {
+    return { ok: false, mesej: 'Tiada URL Sheets diatur.', menunggu: store.sheetsMenunggu() };
+  }
+
+  sheetsSibuk = true;
+  try {
+    const baris = store.sheetsBelumHantar(SHEETS_BATAS);
+    if (!baris.length) return { ok: true, dihantar: 0, menunggu: 0 };
+
+    const badan = {
+      perintah: 'hantar',
+      sumber: 'Sistem Nama Majlis',
+      kunci: String(settings.sheets_kunci || ''),
+      masa_hantar: Date.now(),
+      baris: baris.map((b) => ({
+        kod: b.kod,
+        nama: b.nama,
+        kelas: b.kelas,
+        mod: b.mod,
+        sumber: b.sumber,
+        masa: b.masa,
+      })),
+    };
+
+    const penutup = new AbortController();
+    const tamat = setTimeout(() => penutup.abort(), SHEETS_TAMAT);
+    let res;
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(badan),
+        signal: penutup.signal,
+        redirect: 'follow',
+      });
+    } finally {
+      clearTimeout(tamat);
+    }
+
+    const teks = await res.text();
+    let json = null;
+    try {
+      json = JSON.parse(teks);
+    } catch {
+      /* Apps Script biasa pulangkan HTML jika tiada kebenaran */
+    }
+
+    if (!res.ok || !json || json.ok !== true) {
+      store.sheetsTandaiGagal(baris.map((b) => b.id));
+      const mesej =
+        (json && (json.error || json.message)) ||
+        (res.status === 403 || teks.includes('<title>')
+          ? 'Akses Apps Script ditolak — deploy sebagai "Anyone".'
+          : `Respons tidak dijangka (HTTP ${res.status}).`);
+      if (!senyap) return { ok: false, mesej, menunggu: store.sheetsMenunggu() };
+      console.warn('[sheets] hantar gagal:', mesej);
+      return { ok: false, mesej };
+    }
+
+    const id = baris.map((b) => b.id);
+    const buang = store.sheetsBuang(id);
+    const baki = store.sheetsMenunggu();
+    /* Jika masih banyak tertunggak, sambung batch seterusnya. */
+    if (baki > 0) {
+      setImmediate(() => sheetsSirap({ senyap: true }).catch(() => {}));
+    }
+    return { ok: true, dihantar: buang, menunggu: baki, diterima: json.diterima };
+  } catch (err) {
+    const sebab = err && err.name === 'AbortError' ? 'Tamiat masa tamat' : err.message;
+    try {
+      store.sheetsTandaiGagal(store.sheetsBelumHantar(SHEETS_BATAS).map((b) => b.id));
+    } catch {
+      /* abai */
+    }
+    if (!senyap) return { ok: false, mesej: sebab, menunggu: store.sheetsMenunggu() };
+    console.warn('[sheets] hantar gagal:', sebab);
+    return { ok: false, mesej: sebab };
+  } finally {
+    sheetsSibuk = false;
+  }
+}
+
+app.post('/api/sheets/uji', async (_req, res) => {
+  const settings = store.getSettings();
+  const url = String(settings.sheets_url || '').trim();
+  if (!url || !sheetsUrlSah(url)) {
+    return res.status(400).json({ error: 'Isi URL Web App Apps Script dahulu.' });
+  }
+  try {
+    const penutup = new AbortController();
+    const tamat = setTimeout(() => penutup.abort(), 12000);
+    let r;
+    try {
+      r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          perintah: 'uji',
+          sumber: 'Sistem Nama Majlis',
+          kunci: String(settings.sheets_kunci || ''),
+          masa_hantar: Date.now(),
+          baris: [{ kod: 'UJIAN', nama: 'Ujian sambungan', kelas: '-', mod: 'uji', sumber: 'sistem', masa: Date.now() }],
+        }),
+        signal: penutup.signal,
+        redirect: 'follow',
+      });
+    } finally {
+      clearTimeout(tamat);
+    }
+    const teks = await r.text();
+    let json = null;
+    try {
+      json = JSON.parse(teks);
+    } catch {
+      /* bukan JSON */
+    }
+    return res.json({
+      ok: r.ok && json && json.ok === true,
+      http: r.status,
+      respons: json || teks.slice(0, 220),
+    });
+  } catch (err) {
+    return res.json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/sheets/hantar', async (req, res) => {
+  /* semua = true: masukkan semula SEMUA rekod kehadiran ke giliran
+     (Apps Script menapis pendua, jadi ini selamat untuk backfill). */
+  if (req.body && req.body.semua) {
+    store.sheetsKosongkan();
+    for (const r of store.listAttendance()) {
+      if (r.daftar_at) {
+        store.sheetsEnqueue({
+          kod: r.kod,
+          nama: r.nama,
+          kelas: r.kelas,
+          mod: 'daftar',
+          sumber: r.daftar_source || r.source,
+          masa: r.daftar_at,
+        });
+      }
+      if (r.papar_at) {
+        store.sheetsEnqueue({
+          kod: r.kod,
+          nama: r.nama,
+          kelas: r.kelas,
+          mod: 'papar',
+          sumber: r.papar_source || r.source,
+          masa: r.papar_at,
+        });
+      }
+    }
+  }
+  const hasil = await sheetsSirap({ senyap: false });
+  res.json({ ...hasil, menunggu: store.sheetsMenunggu(), murid: store.stats().total });
+});
+
+/* Cuba semula secara berkala selagi ada yang tertunggak. */
+setInterval(() => {
+  const settings = store.getSettings();
+  if (String(settings.sheets_auto) === '0') return;
+  if (!String(settings.sheets_url || '').trim()) return;
+  if (store.sheetsMenunggu() === 0) return;
+  sheetsSirap({ senyap: true }).catch(() => {});
+}, 25000).unref?.();
+
+/* ------------------------------------------------------------------ */
 /*  Paparan (demo / kawalan)                                           */
 /* ------------------------------------------------------------------ */
 
@@ -750,6 +969,16 @@ app.post('/api/settings', (req, res) => {
   if (patch.logo_saiz !== undefined) {
     const allowed = ['sederhana', 'besar', 'penuh'];
     patch.logo_saiz = allowed.includes(String(patch.logo_saiz)) ? String(patch.logo_saiz) : 'penuh';
+  }
+  if (patch.sheets_url !== undefined) {
+    const url = String(patch.sheets_url).trim();
+    if (url && !sheetsUrlSah(url)) {
+      return res.status(400).json({ error: 'URL Google Sheets tidak sah (mesti http/https).' });
+    }
+    patch.sheets_url = url;
+  }
+  if (patch.sheets_auto !== undefined) {
+    patch.sheets_auto = String(patch.sheets_auto) === '0' ? '0' : '1';
   }
   const settings = store.setSettings(patch);
   sendEvent('settings', settings);

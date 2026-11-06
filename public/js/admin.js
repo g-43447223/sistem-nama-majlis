@@ -405,6 +405,14 @@
       const data = await api('/api/attendance');
       state.attendance = data.attendance || [];
       updateStats(data);
+
+      if (data.sheets) {
+        const tunggu = $('#sheetsTunggu');
+        const btn = $('#sheetsKehadiran');
+        if (tunggu) tunggu.textContent = data.sheets.menunggu;
+        if (btn) btn.classList.toggle('hidden', !data.sheets.diatur);
+      }
+
       if (!state.students.length) await loadStudents();
       renderAttendance();
     } catch (err) {
@@ -564,6 +572,9 @@
     $('#setBunyi').checked = settings.bunyi === '1';
     $('#setKehadiran').checked = settings.papar_kehadiran === '1';
     $('#setFormal').checked = settings.mod_formal !== '0';
+    $('#setSheetsUrl').value = settings.sheets_url || '';
+    $('#setSheetsKunci').value = settings.sheets_kunci || '';
+    $('#setSheetsAuto').checked = settings.sheets_auto !== '0';
     applyBgPreview(settings.background || '');
     applyLogoPreview(settings.logo || '');
     applyCrestPreview(settings.logo_sekolah || '');
@@ -619,6 +630,9 @@
       subtajuk: $('#setSubtajuk').value.trim(),
       nama_sekolah: $('#setSekolah').value.trim(),
       cap_penjuru: $('#setCap').value.trim(),
+      sheets_url: $('#setSheetsUrl').value.trim(),
+      sheets_kunci: $('#setSheetsKunci').value.trim(),
+      sheets_auto: $('#setSheetsAuto').checked ? '1' : '0',
       tempoh_paparan: $('#setTempoh').value,
       logo_saiz: $('#setLogoSaiz').value,
       bunyi: $('#setBunyi').checked ? '1' : '0',
@@ -751,6 +765,71 @@
       toast(err.message, 'bad');
     }
   });
+
+  /* ================================================================ */
+  /*  Cermin Google Sheets                                             */
+  /* ================================================================ */
+
+  function sheetsStatusText(teks, kelas = '') {
+    const el = $('#sheetsStatus');
+    if (!el) return;
+    el.textContent = teks;
+    el.className = `muted ${kelas}`.trim();
+    el.style.fontSize = '0.78rem';
+  }
+
+  $('#sheetsUji').addEventListener('click', async () => {
+    /* Simpan URL dahulu supaya pelayan tahu ke mana hendak menguji. */
+    sheetsStatusText('Menguji sambungan…');
+    try {
+      await api('/api/settings', {
+        method: 'POST',
+        body: {
+          sheets_url: $('#setSheetsUrl').value.trim(),
+          sheets_kunci: $('#setSheetsKunci').value.trim(),
+        },
+      });
+      const hasil = await api('/api/sheets/uji', { method: 'POST' });
+      if (hasil.ok) {
+        sheetsStatusText('Sambungan OK — Apps Script menjawab.', 'ok');
+        toast('Google Sheets bersedia menerima rekod.', 'ok');
+      } else {
+        const sebab = hasil.error || (hasil.respons && hasil.respons.error) || `HTTP ${hasil.http}`;
+        sheetsStatusText(`Gagal: ${sebab}`, 'bad');
+        toast(`Ujian Sheets gagal: ${sebab}`, 'bad');
+      }
+    } catch (err) {
+      sheetsStatusText(`Gagal: ${err.message}`, 'bad');
+      toast(err.message, 'bad');
+    }
+  });
+
+  async function sheetsHantar(semua) {
+    sheetsStatusText(semua ? 'Menghantar semua rekod…' : 'Menghantar rekod tertunggak…');
+    try {
+      const hasil = await api('/api/sheets/hantar', {
+        method: 'POST',
+        body: semua ? { semua: true } : {},
+      });
+      if (hasil.ok) {
+        sheetsStatusText(
+          `Berjaya: ${hasil.dihantar || 0} rekod dihantar. Tertunggak: ${hasil.menunggu || 0}.`,
+          'ok'
+        );
+        toast(`${hasil.dihantar || 0} rekod dihantar ke Google Sheets.`, 'ok');
+      } else {
+        sheetsStatusText(`Gagal: ${hasil.mesej}`, 'bad');
+        toast(`Hantar ke Sheets gagal: ${hasil.mesej}`, 'bad');
+      }
+      await loadAttendance();
+    } catch (err) {
+      sheetsStatusText(`Gagal: ${err.message}`, 'bad');
+      toast(err.message, 'bad');
+    }
+  }
+
+  $('#sheetsHantar').addEventListener('click', () => sheetsHantar(true));
+  $('#sheetsKehadiran').addEventListener('click', () => sheetsHantar(false));
 
   // Saiz logo dihantar serta-merta — tidak perlu tekan "Simpan Tetapan".
   $('#setLogoSaiz').addEventListener('change', async (event) => {

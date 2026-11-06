@@ -38,6 +38,19 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_students_kelas ON students(kelas);
   CREATE INDEX IF NOT EXISTS idx_attendance_time ON attendance(scanned_at);
+
+  /* Baris gilir cermin Google Sheets - rekod yang belum berjaya dihantar. */
+  CREATE TABLE IF NOT EXISTS sheets_queue (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    kod        TEXT NOT NULL,
+    nama       TEXT,
+    kelas      TEXT,
+    mod        TEXT,
+    sumber     TEXT,
+    masa       INTEGER,
+    percubaan  INTEGER DEFAULT 0,
+    dibuat     INTEGER NOT NULL
+  );
 `);
 
 /* ------------------------------------------------------------------
@@ -73,6 +86,9 @@ const DEFAULT_SETTINGS = {
   logo_sekolah: '',
   mod_formal: '1',
   papar_kehadiran: '1',
+  sheets_url: '',
+  sheets_auto: '1',
+  sheets_kunci: '',
 };
 
 const SEED = [
@@ -258,6 +274,46 @@ function clearAttendance() {
   db.prepare('DELETE FROM attendance').run();
 }
 
+/* ------------------------------------------------------------------
+   Baris gilir cermin Google Sheets
+   ------------------------------------------------------------------ */
+
+function sheetsEnqueue({ kod, nama, kelas, mod, sumber, masa }) {
+  db.prepare(
+    'INSERT INTO sheets_queue (kod, nama, kelas, mod, sumber, masa, dibuat) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(kod, nama, kelas, mod, sumber, masa || Date.now(), Date.now());
+}
+
+function sheetsBelumHantar(batas = 50) {
+  return db.prepare('SELECT * FROM sheets_queue ORDER BY id ASC LIMIT ?').all(batas);
+}
+
+function sheetsBuang(ids) {
+  if (!ids.length) return 0;
+  const buang = db.prepare('DELETE FROM sheets_queue WHERE id = ?');
+  let n = 0;
+  for (const id of ids) n += buang.run(id).changes;
+  return n;
+}
+
+function sheetsTandaiGagal(ids) {
+  if (!ids.length) return 0;
+  const naik = db.prepare('UPDATE sheets_queue SET percubaan = percubaan + 1 WHERE id = ?');
+  let n = 0;
+  for (const id of ids) n += naik.run(id).changes;
+  /* Buang rekod yang sudah 12 kali gagal supaya baris gilir tak membesar. */
+  db.prepare('DELETE FROM sheets_queue WHERE percubaan >= 12').run();
+  return n;
+}
+
+function sheetsKosongkan() {
+  db.prepare('DELETE FROM sheets_queue').run();
+}
+
+function sheetsMenunggu() {
+  return db.prepare('SELECT COUNT(*) AS n FROM sheets_queue').get().n;
+}
+
 seed();
 
 module.exports = {
@@ -276,4 +332,10 @@ module.exports = {
   getAttendanceFor,
   markAttendance,
   clearAttendance,
+  sheetsEnqueue,
+  sheetsBelumHantar,
+  sheetsBuang,
+  sheetsTandaiGagal,
+  sheetsKosongkan,
+  sheetsMenunggu,
 };
