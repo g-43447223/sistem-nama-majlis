@@ -272,6 +272,9 @@ function markAttendance(studentId, source, mod = 'papar') {
 
 function clearAttendance() {
   db.prepare('DELETE FROM attendance').run();
+  /* Giliran cermin Sheets ikut dikosongkan supaya rekod yang sudah dipadam
+     tidak dihantar ke Google Sheet. */
+  db.prepare('DELETE FROM sheets_queue').run();
 }
 
 /* ------------------------------------------------------------------

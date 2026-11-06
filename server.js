@@ -592,7 +592,7 @@ app.post('/api/scan', (req, res) => {
   const rekod = store.getAttendanceFor(student.id);
 
   /* Cermin Google Sheets: masuk giliran, hantar tanpa menghalang paparan. */
-  if (!result.duplicate) {
+  if (!result.duplicate && String(store.getSettings().sheets_url || '').trim()) {
     tambahKeGiliran({
       kod: student.kod,
       nama: student.nama,

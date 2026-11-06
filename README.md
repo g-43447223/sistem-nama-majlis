@@ -240,6 +240,7 @@ sentiasa kelihatan (contohnya ketika uji cuba).
 | Saiz logo program | Sederhana / Besar / Penuhi ruang tengah — serta-merta |
 | Logo sekolah | Lambang kecil di penjuru atas kiri (lihat 6.2) |
 | Mod formal paparan | Sembunyi butang bunyi, “menunggu imbasan” & kiraan giliran (lihat 6.3) |
+| Cermin Google Sheets | Hantar kehadiran ke Sheet secara automatik (lihat 8.1) |
 
 Tetapan bunyi perlu diaktifkan sekali pada skrin paparan dengan menekan butang
 **Aktifkan bunyi** (kekangan pelayar). Dalam mod formal, gerakkan tetikus untuk
@@ -266,6 +267,56 @@ Kad QR yang sama digunakan untuk dua perkara berasingan:
 - **Muat turun CSV** menyertakan kedua-dua peringkat:
   `Bil, Nama, Kelas, Kod, Status, Daftar hadir, Sumber daftar, Dipaparkan, Sumber papar`.
 - **Kosongkan Rekod** memadam kedua-dua peringkat (guna selepas sesi latihan).
+
+---
+
+## 8.1 Cermin Google Sheets (pilihan)
+
+Kehadiran boleh dihantar **automatik** ke fail Google Sheet — sesuai jika pejabat
+perlukan rekod hidup, tetapi sistem tetap berjalan pada laptop (tiada internet
+pun majlis tak terbantut).
+
+### Sediakan Apps Script ( sekali sahaja )
+
+1. Buka fail Google Sheet → **Extensions → Apps Script**.
+2. Padam kod sedia ada, tampal keseluruhan fail **`google-apps-script.gs`** dari repo ini.
+3. (Disyorkan) **File → Project Properties → Script Properties** → tambah kunci
+   `KUNCI` dengan nilai rahsia anda, contoh `RAPI2026`.
+4. **Deploy → New deployment → Web app**, dengan:
+   - *Execute as*: **Me**
+   - *Who has access*: **Anyone**
+5. Salin URL yang berakhir `/exec`.
+
+### Hubungkan dari sistem
+
+1. **Admin → Tetapan → Cermin Google Sheets (pilihan)**.
+2. Tampal URL `/exec` (+ kunci rahsia jika anda set `KUNCI`).
+3. Tekan **Uji Sambungan** — status akan memaparkan “Sambungan OK”.
+4. Kekangkan **Hantar automatik selepas tiap imbasan** (lalai: aktif).
+5. **Hantar Semua Sekarang** untuk muat naik balik semua rekod (pendua ditapis
+   oleh Apps Script, jadi ia selamat ditekan berkali-kali).
+6. Di **Admin → Kehadiran** ada butang **Hantar ke Sheets** dengan kiraan rekod
+   yang masih tertunggak.
+
+### Cara ia bekerja (dan sebab ia selamat)
+
+- Setiap imbasan disimpan dalam pangkalan data tempatan **dahulu**, kemudian
+  dimasukkan ke baris gilir `sheets_queue` dan dihantar ke Google dalam latar belakang.
+- Jika internet putus / Sheet belum boleh dicapai: **paparan nama tidak terjejas**.
+  Rekod kekal dalam baris gilir dan dicuba semula setiap ~25 saat (dan apabila
+  butang “Hantar” ditekan). Selepas 12 kali gagal, rekod itu dibuang daripada giliran
+  supaya baris gilir tidak membesar — tetapi rekod kehadiran tetap ada dalam sistem.
+- Hantaran ditapis mengikut `Kod + Peringkat + Masa Imbas`, jadi pengulangan tidak
+  melahirkan baris berganda dalam Sheet.
+- Sheet akan dicipta sendiri atas nama **Kehadiran** dengan lajur:
+  `Rekod Pada | Kod | Nama | Kelas | Peringkat | Sumber | Masa Imbas | Kiriman`.
+- Had kuota Google Sheets (300 baca + 300 tulis/min per projek; 60/min per pengguna)
+  bukan masalah di sini kerana hanya **satu** pelayan yang menghantar, dan hanya
+  satu hantaran bagi setiap sekumpulan imbasan.
+
+> **Google Sheets bukan enjin masa-nyata.** Jangan buang SQLite untuk paparan:
+> nama murid perlu muncul serta-merta, dan Sheets hanya boleh dipantau secara
+> berala (polling) dengan had yang ketat. Guna Sheets sebagai **laporan/cermin**.
 
 ---
 
@@ -344,6 +395,9 @@ sistem nama majlis/
 ├─ db.js                Pangkalan data SQLite + data contoh
 ├─ package.json
 ├─ mula.bat             Pelancar Windows
+├─ google-apps-script.gs Kod untuk Apps Script (cermin Google Sheets)
+├─ Dockerfile           Imej container untuk hosting
+├─ render.yaml          Blueprint Render (web + volum kekal)
 ├─ data/                Pangkalan data & sijil (dijana automatik)
 ├─ public/
 │  ├─ index.html        Halaman utama
@@ -377,6 +431,15 @@ sistem nama majlis/
   hanya mod `papar` menghasilkan peristiwa SSE `reveal`.
 - Statistik menyertakan `hadir`, `daftar`, `dipapar` dan pecahan per kelas untuk
   ketiga-tiganya.
+- **Cermin Google Sheets:** jadual `sheets_queue` menyimpan rekod yang belum berjaya
+  dihantar; `POST /api/sheets/uji` dan `POST /api/sheets/hantar` (`{ "semua": true }`
+  untuk muat naik balik) + cubaan automatik setiap ~25 saat. Hantaran ke Apps Script
+  menggunakan `Content-Type: text/plain` (elak preflight CORS) dan menjangkakan
+  respons `{ ok: true, ... }`.
+- **Kunci majlis (`MAJLIS_KUNCI`):** dihantar sebagai header `x-majlis-kunci`, cookie
+  `majlis_kunci`, atau `?kunci=` pada pautan. `GET /api/health`, `GET /api/kuasa`,
+  `GET /api/bootstrap`, `GET /api/events` dan avatar sentiasa awam supaya skrin
+  projektor tidak perlu login.
 
 ---
 
