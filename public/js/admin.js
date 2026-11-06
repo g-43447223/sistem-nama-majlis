@@ -961,6 +961,36 @@
   /*  Mula                                                             */
   /* ================================================================ */
 
+  function paparPautanKaunter(info) {
+    const u = info && info.urls;
+    if (!u) return;
+    const kunci = window.UI.kunciSaya ? window.UI.kunciSaya() : '';
+    const tampalKunci = (pautan) =>
+      info.perluKunci && kunci && !/kunci=/.test(pautan)
+        ? `${pautan}${pautan.includes('?') ? '&' : '?'}kunci=${encodeURIComponent(kunci)}`
+        : pautan;
+
+    const fon = tampalKunci(u.kaunterFon || `${u.kamera}?mod=daftar`);
+    const laptop = tampalKunci(u.kaunter);
+    const tanpaProtokol = (t) => t.replace(/^https?:\/\//, '');
+
+    const qrFon = $('#kaunterQrFon');
+    const qrLaptop = $('#kaunterQrLaptop');
+    if (qrFon) qrFon.src = '/api/qr-link?size=264&url=' + encodeURIComponent(fon);
+    if (qrLaptop) qrLaptop.src = '/api/qr-link?size=264&url=' + encodeURIComponent(laptop);
+
+    const aFon = $('#pautanKaunterFon');
+    const aLaptop = $('#pautanKaunterLaptop');
+    if (aFon) {
+      aFon.href = fon;
+      aFon.textContent = tanpaProtokol(fon);
+    }
+    if (aLaptop) {
+      aLaptop.href = laptop;
+      aLaptop.textContent = tanpaProtokol(laptop);
+    }
+  }
+
   (async function boot() {
     const hash = (location.hash || '').replace('#', '');
     if (['murid', 'kehadiran', 'kad', 'tetapan', 'demo'].includes(hash)) switchTab(hash);
@@ -971,6 +1001,7 @@
       state.settings = info.settings;
       fillSettingsForm(info.settings);
       updateStats(info);
+      paparPautanKaunter(info);
     } catch (err) {
       toast('Pelayan tidak dapat dihubungi.', 'bad');
     }

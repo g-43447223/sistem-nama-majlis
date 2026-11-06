@@ -393,6 +393,7 @@ app.get('/api/bootstrap', (req, res) => {
       paparan: `${asas}/display.html`,
       pengimbas: `${asas}/scan.html`,
       kaunter: `${asas}/scan.html?mod=daftar`,
+      kaunterFon: `${kamera}/scan.html?mod=daftar`,
       kamera: `${kamera}/scan.html`,
       admin: `${asas}/admin.html`,
       kad: `${asas}/qr.html`,

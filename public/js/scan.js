@@ -411,7 +411,11 @@
     if (!window.isSecureContext) {
       toast('Kamera perlukan sambungan selamat. Membuka versi HTTPS…', 'warn');
       setTimeout(() => {
-        if (info && info.urls && info.urls.kamera) window.location.href = info.urls.kamera;
+        if (info && info.urls && info.urls.kamera) {
+          /* Kekalkan mod (papar/daftar) semasa melompat ke HTTPS. */
+          window.location.href =
+            info.urls.kamera + (info.urls.kamera.includes('?') ? '&' : '?') + 'mod=' + mod;
+        }
       }, 900);
       return;
     }
