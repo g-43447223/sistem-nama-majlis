@@ -194,6 +194,7 @@
   function fallbackPhoto(student) {
     foto.onerror = null;
     foto.src = `/api/avatar/${encodeURIComponent(student.id)}`;
+    foto.classList.add('avatar');
   }
 
   function showStudent(data) {
@@ -206,12 +207,20 @@
     const { student } = data;
 
     foto.onerror = () => fallbackPhoto(student);
-    foto.src = student.foto || `/api/avatar/${encodeURIComponent(student.id)}`;
+    const puncaFoto = student.foto || `/api/avatar/${encodeURIComponent(student.id)}`;
+    foto.src = puncaFoto;
     foto.alt = `Gambar ${student.nama}`;
+    /* Avatar janaan adalah segi empat: biarkannya utuh dalam bingkai potret. */
+    foto.classList.toggle('avatar', String(puncaFoto).startsWith('/api/avatar'));
 
     nama.textContent = student.nama;
     kelas.textContent = student.kelas;
     eyebrow.textContent = 'Tahniah';
+
+    /* Skala saiz nama ikut panjang — lajur kanan lebih sempit sekarang. */
+    const aksara = String(student.nama || '').trim().length;
+    nama.classList.toggle('nama-panjang', aksara > 26 && aksara <= 44);
+    nama.classList.toggle('nama-sangat-panjang', aksara > 44);
 
     demoBadge.classList.toggle('hidden', !data.demo);
     applyStats(data);

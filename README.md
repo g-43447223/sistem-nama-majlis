@@ -82,6 +82,10 @@ yang sudah ditetapkan ke mod daftar akan kekal di mod itu apabila dibuka semula.
 
 ### Semasa majlis
 
+Susun atur paparan nama: **gambar murid besar di kiri** (bingkai potret 4:5, emas),
+**butiran di kanan** — `TAHNIAH`, nama penuh (2–3 baris, saiz automatik ikut panjang nama),
+garis emas, dan badge kelas. Gambar masuk dari kiri, teks masuk dari kanan.
+
 1. Buka **Paparan** di laptop yang disambung ke projektor. Tekan `F11` untuk skrin penuh.
 2. Buka **Pengimbas** di peranti yang mempunyai scanner/kamera (mod **Paparan nama**).
 3. Imbas kad murid. Nama akan muncul secara automatik di skrin paparan.
