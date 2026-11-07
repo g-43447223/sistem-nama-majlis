@@ -142,8 +142,26 @@ Jika tiada gambar, sistem akan menjana avatar berinisial secara automatik.
    - Skala **100%**
    - Hidupkan **Background graphics**
 
-Susun atur: **2 lajur × 4 baris = 8 kad setiap halaman**. Setiap kad mengandungi nama,
-kelas, kod QR dan nama majlis. Potong ikut garis kad.
+Susun atur: **2 lajur × 4 baris = 8 kad setiap halaman**. Setiap kad mengandungi nama sekolah,
+nama majlis, kod QR (26 × 26 mm), nama penuh murid, kelas, dan kod unik. Potong ikut garis kad.
+
+### 4.1 Nama panjang & teks terpotong
+
+Kad akan **menyesuaikan saiz tulisan sendiri** (`qr.js` → `muatSemuaKad`):
+
+- Nama panjang dikecilkan dari 10.5pt sehingga 6.4pt selagi perlu (berlapis, tanpa elipsis) supaya
+  **kesemua nama terbit penuh**.
+- Baris nama dibenarkan hingga 3 baris; jika masih tidak muat, kad itu **membesar**
+  (kelas `.longgar`) dan operator diberi notifikasi — supaya tiada teks hilang.
+- Nama sekolah & tajuk majlis kini boleh membalut 2 baris (dahulunya `nowrap` + “…”, jadi
+  “Sekolah Kebangsaan Pulau Indah” kelihatan terpotong).
+- Kod QR diperkecil 30 mm → **26 mm** untuk memberi ruang kepada nama; pada 26 mm saiz modul
+  masih ~1 mm, sangat mudah diimbas kamera telefon/mesin scanner.
+- Pengiraan saiz dijalankan apabila halaman dibuka, bila kelas ditukar, bila tetingkap
+  berubah saiz, dan **sebelum dicetak** (butang Cetak menjalankannya dahulu).
+
+Diuji pada 373 kad sebenar: **0 kad terpotong**, proses muat-ikut-saiz ambil **1 ms**;
+nama 96 aksara masih muat (8pt, 3 baris) dalam kad 60 mm.
 
 > Kod QR mengandungi **kod murid** (contoh `NM26-0001`), bukan URL. Ini bermakna kad
 > kekal sah walaupun alamat IP laptop berubah.

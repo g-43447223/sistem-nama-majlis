@@ -39,6 +39,91 @@
       .join('');
   }
 
+  /* ------------------------------------------------------------------
+     Muat ikut saiz: kecilkan tulisan sehingga muat dalam kad.
+     Cara lama memotong nama (line-clamp + ellipsis); sekarang tulisan
+     dibesarkan/dikecilkan supaya SEMUA butiran terbit penuh.
+     ------------------------------------------------------------------ */
+
+  const HAD_NAMA = { maks: 10.5, minima: 6.4, langkah: 0.35 };
+  const HAD_KEPALA = { maks: 6, minima: 4.2, langkah: 0.2 };
+  const HAD_MAJLIS = { maks: 5.6, minima: 4, langkah: 0.2 };
+
+  function susut(kad, el, had) {
+    if (!el) return;
+    let saiz = had.maks;
+    el.style.fontSize = saiz + 'pt';
+    let pengira = 0;
+    while (saiz - had.langkah >= had.minima && lebih(kad) && pengira < 40) {
+      saiz = Math.round((saiz - had.langkah) * 100) / 100;
+      el.style.fontSize = saiz + 'pt';
+      pengira += 1;
+    }
+  }
+
+  function lebih(kad) {
+    return kad.scrollHeight - kad.clientHeight > 0.6;
+  }
+
+  function muatKad(kad) {
+    kad.classList.remove('longgar');
+
+    /* Dua pusingan: nama ialah pengguna ruang terbesar, tetapi kad
+       masih boleh terkeluar kerana baris nama + kelas + kod. */
+    for (let pusingan = 0; pusingan < 2; pusingan += 1) {
+      susut(kad, kad.querySelector('.qcard-name'), HAD_NAMA);
+      susut(kad, kad.querySelector('.qcard-head'), HAD_KEPALA);
+      susut(kad, kad.querySelector('.qcard-event'), HAD_MAJLIS);
+      if (!lebih(kad)) break;
+    }
+
+    /* Nama masih terlalu panjang walaupun pada 6.4pt: benarkan kad
+       membesar (supaya teks tidak hilang) dan maklumkan operator. */
+    if (lebih(kad)) {
+      kad.classList.add('longgar');
+      kad.dataset.panjang = '1';
+    }
+  }
+
+  function muatSemuaKad() {
+    const kad = Array.from(document.querySelectorAll('#qgrid .qcard'));
+    for (const satu of kad) muatKad(satu);
+    return kad;
+  }
+
+  function laporkanKad() {
+    const kad = muatSemuaKad();
+    const panjang = kad.filter((k) => k.classList.contains('longgar'));
+    if (panjang.length) {
+      const nama = panjang.map((k) => k.querySelector('.qcard-name').textContent.trim());
+      window.UI.toast(
+        `${panjang.length} kad terlalu panjang — kad itu dibesarkan supaya nama tak terpotong: ${nama
+          .slice(0, 3)
+          .join(', ')}${panjang.length > 3 ? '…' : ''}`,
+        'warn'
+      );
+    }
+  }
+
+  function susunSemula() {
+    /* QR mempunyai saiz tetap (26mm) jadi pengiraan boleh dibuat serta-merta. */
+    laporkanKad();
+
+    /* Sahkan semula selepas semua gambar selesai dimuat. */
+    const gambar = Array.from(document.querySelectorAll('#qgrid img.qcard-qr'));
+    Promise.all(
+      gambar.map(
+        (img) =>
+          img.complete
+            ? Promise.resolve()
+            : new Promise((resolve) => {
+                img.addEventListener('load', () => resolve(), { once: true });
+                img.addEventListener('error', () => resolve(), { once: true });
+              })
+      )
+    ).then(laporkanKad);
+  }
+
   document.getElementById('qrClassFilter').addEventListener('change', (event) => {
     kelas = event.target.value;
     const url = new URL(location.href);
@@ -46,9 +131,20 @@
     else url.searchParams.delete('kelas');
     history.replaceState(null, '', url);
     render();
+    susunSemula();
   });
 
-  document.getElementById('qrPrint').addEventListener('click', () => window.print());
+  document.getElementById('qrPrint').addEventListener('click', () => {
+    laporkanKad();
+    window.print();
+  });
+
+  /* Saiz kad berubah pada skrin kecil; susun semula apabila tetingkup berubah. */
+  let ubahUkuran = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(ubahUkuran);
+    ubahUkuran = setTimeout(laporkanKad, 250);
+  });
 
   (async function boot() {
     try {
@@ -64,6 +160,7 @@
       if (kelas && !students.some((s) => s.kelas === kelas)) kelas = '';
 
       render();
+      susunSemula();
     } catch (err) {
       window.UI.toast(err.message, 'bad');
     }
