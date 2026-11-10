@@ -12,6 +12,8 @@
   const nama = document.getElementById('nama');
   const kelas = document.getElementById('kelas');
   const eyebrow = document.getElementById('eyebrow');
+  const anugerah = document.getElementById('anugerah');
+  const anugerahTeks = document.getElementById('anugerahTeks');
   const demoBadge = document.getElementById('demoBadge');
   const queueBadge = document.getElementById('queueBadge');
   const hadirEl = document.getElementById('hadir');
@@ -37,8 +39,10 @@
       logo_sekolah: '',
       mod_formal: '1',
       papar_kehadiran: '1',
+      papar_anugerah: '1',
     },
     stats: { total: 0, hadir: 0 },
+    anugerahSemasa: '',
     queue: [],
     showing: false,
     timer: null,
@@ -112,6 +116,9 @@
     const formal = state.settings.mod_formal !== '0';
     stage.classList.toggle('formal', formal);
     if (!formal) stage.classList.remove('awake');
+
+    /* Suis anugerah boleh ditukar ketika majlis — kemas kini plat segera. */
+    paparAnugerah(state.anugerahSemasa);
   }
 
   /* Logo sekolah pada penjuru atas kiri. */
@@ -197,6 +204,18 @@
     foto.classList.add('avatar');
   }
 
+  /* Plat anugerah: kosong = tiada elemen dipaparkan (susun atur kekal sama). */
+  function paparAnugerah(teks) {
+    const nilai = String(teks || '').trim();
+    const nampak = Boolean(nilai) && state.settings.papar_anugerah !== '0';
+
+    reveal.classList.toggle('punya-anugerah', nampak);
+    anugerah.classList.toggle('hidden', !nampak);
+    anugerah.classList.toggle('a-sederhana', nampak && nilai.length > 28 && nilai.length <= 46);
+    anugerah.classList.toggle('a-panjang', nampak && nilai.length > 46);
+    anugerahTeks.textContent = nampak ? nilai : '';
+  }
+
   function showStudent(data) {
     if (!data || !data.student) {
       state.showing = false;
@@ -221,6 +240,9 @@
     const aksara = String(student.nama || '').trim().length;
     nama.classList.toggle('nama-panjang', aksara > 26 && aksara <= 44);
     nama.classList.toggle('nama-sangat-panjang', aksara > 44);
+
+    paparAnugerah(student.anugerah);
+    state.anugerahSemasa = student.anugerah || '';
 
     demoBadge.classList.toggle('hidden', !data.demo);
     applyStats(data);

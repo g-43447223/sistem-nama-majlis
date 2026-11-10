@@ -73,6 +73,17 @@ db.exec(
   'UPDATE attendance SET papar_at = scanned_at, papar_source = source WHERE papar_at IS NULL AND daftar_at IS NULL'
 );
 
+/* ------------------------------------------------------------------
+   Penghijrahan: anugerah
+   - anugerah : tajuk anugerah yang diterima murid (NULL = tiada)
+   ------------------------------------------------------------------ */
+
+const studentCols = db.prepare('PRAGMA table_info(students)').all().map((c) => c.name);
+
+if (!studentCols.includes('anugerah')) {
+  db.exec('ALTER TABLE students ADD COLUMN anugerah TEXT');
+}
+
 const DEFAULT_SETTINGS = {
   tajuk_majlis: 'Majlis Apresiasi Murid Cemerlang',
   subtajuk: 'Sesi 2026',
@@ -86,6 +97,7 @@ const DEFAULT_SETTINGS = {
   logo_sekolah: '',
   mod_formal: '1',
   papar_kehadiran: '1',
+  papar_anugerah: '1',
   sheets_url: '',
   sheets_auto: '1',
   sheets_kunci: '',
@@ -174,18 +186,51 @@ function attendanceCount() {
   return db.prepare('SELECT COUNT(*) AS n FROM attendance').get().n;
 }
 
+/* ------------------------------------------------------------------
+   Anugerah
+   ------------------------------------------------------------------ */
+
+const ANUGERAH_HAD = 90;
+
+/** Bersihkan teks anugerah: satu baris, ruang tunggal, had 90 aksara. */
+function normalisasiAnugerah(nilai) {
+  const teks = String(nilai ?? '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!teks) return null;
+  return teks.slice(0, ANUGERAH_HAD);
+}
+
+/** Nilai anugerah unik + bilangannya (untuk datalist, penapis & senarai MC). */
+function senaraiAnugerah() {
+  return db
+    .prepare(
+      `SELECT anugerah AS anugerah, COUNT(*) AS jumlah
+       FROM students
+       WHERE anugerah IS NOT NULL AND TRIM(anugerah) <> ''
+       GROUP BY UPPER(TRIM(anugerah))
+       ORDER BY jumlah DESC, anugerah COLLATE NOCASE ASC`
+    )
+    .all();
+}
+
 function stats() {
   const total = db.prepare('SELECT COUNT(*) AS n FROM students').get().n;
   const hadir = attendanceCount();
   const daftar = db.prepare('SELECT COUNT(*) AS n FROM attendance WHERE daftar_at IS NOT NULL').get().n;
   const dipapar = db.prepare('SELECT COUNT(*) AS n FROM attendance WHERE papar_at IS NOT NULL').get().n;
+  const beranugerah = db
+    .prepare("SELECT COUNT(*) AS n FROM students WHERE anugerah IS NOT NULL AND TRIM(anugerah) <> ''")
+    .get().n;
   const perClass = db
     .prepare(
       `SELECT s.kelas AS kelas,
               COUNT(s.id) AS total,
               SUM(CASE WHEN a.id IS NULL THEN 0 ELSE 1 END) AS hadir,
               SUM(CASE WHEN a.daftar_at IS NULL THEN 0 ELSE 1 END) AS daftar,
-              SUM(CASE WHEN a.papar_at IS NULL THEN 0 ELSE 1 END) AS dipapar
+              SUM(CASE WHEN a.papar_at IS NULL THEN 0 ELSE 1 END) AS dipapar,
+              SUM(CASE WHEN s.anugerah IS NULL OR TRIM(s.anugerah) = '' THEN 0 ELSE 1 END) AS beranugerah
        FROM students s
        LEFT JOIN attendance a ON a.student_id = s.id
        GROUP BY s.kelas
@@ -200,24 +245,34 @@ function stats() {
     belum_daftar: total - daftar,
     dipapar,
     belum_papar: total - dipapar,
+    beranugerah,
+    belum_anugerah: total - beranugerah,
     perClass,
   };
 }
 
-function listStudents({ q = '', kelas = '' } = {}) {
+function listStudents({ q = '', kelas = '', anugerah = '' } = {}) {
   let sql = `SELECT s.*, a.scanned_at AS masa, a.daftar_at, a.papar_at
              FROM students s
              LEFT JOIN attendance a ON a.student_id = s.id
              WHERE 1 = 1`;
   const args = [];
   if (q) {
-    sql += ' AND (s.nama LIKE ? OR s.kod LIKE ? OR s.kelas LIKE ?)';
+    sql += ' AND (s.nama LIKE ? OR s.kod LIKE ? OR s.kelas LIKE ? OR s.anugerah LIKE ?)';
     const like = `%${q}%`;
-    args.push(like, like, like);
+    args.push(like, like, like, like);
   }
   if (kelas) {
     sql += ' AND s.kelas = ?';
     args.push(kelas);
+  }
+  if (anugerah === 'ada') {
+    sql += " AND s.anugerah IS NOT NULL AND TRIM(s.anugerah) <> ''";
+  } else if (anugerah === 'tiada') {
+    sql += " AND (s.anugerah IS NULL OR TRIM(s.anugerah) = '')";
+  } else if (anugerah) {
+    sql += ' AND UPPER(TRIM(s.anugerah)) = UPPER(TRIM(?))';
+    args.push(anugerah);
   }
   sql += ' ORDER BY s.kelas, s.nama';
   return db.prepare(sql).all(...args);
@@ -228,7 +283,7 @@ function listAttendance() {
     .prepare(
       `SELECT a.id, a.student_id, a.scanned_at, a.source,
               a.daftar_at, a.daftar_source, a.papar_at, a.papar_source,
-              s.nama, s.kelas, s.kod, s.foto
+              s.nama, s.kelas, s.kod, s.foto, s.anugerah
        FROM attendance a
        JOIN students s ON s.id = a.student_id
        ORDER BY a.scanned_at DESC`
@@ -337,6 +392,9 @@ module.exports = {
   getStudentByKod,
   stats,
   attendanceCount,
+  normalisasiAnugerah,
+  senaraiAnugerah,
+  ANUGERAH_HAD,
   listStudents,
   listAttendance,
   getAttendanceFor,

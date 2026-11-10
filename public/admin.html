@@ -43,6 +43,11 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3h-3zM21 14h-2M14 21h3M21 21h-3" /></svg>
             Kad QR
           </button>
+          <button class="side-link" data-tab="mc" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 3l1.6 3.6L17 8l-3.4 1.4L12 13l-1.6-3.6L7 8l3.4-1.4L12 3z" /><path d="M9 14.5L7.5 19l4.5-2.2L16.5 19 15 14.5" /></svg>
+            Senarai MC
+            <span class="count" id="navMcCount">0</span>
+          </button>
           <button class="side-link" data-tab="tetapan" type="button">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" /></svg>
             Tetapan
@@ -81,6 +86,11 @@
             <select id="filterKelas" class="select" aria-label="Tapis kelas">
               <option value="">Semua kelas</option>
             </select>
+            <select id="filterAnugerah" class="select" aria-label="Tapis anugerah">
+              <option value="">Semua anugerah</option>
+              <option value="ada">Ada anugerah</option>
+              <option value="tiada">Belum ada anugerah</option>
+            </select>
             <button class="btn" type="button" id="btnImport">Import CSV</button>
             <label class="btn file-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
@@ -93,10 +103,11 @@
           <div class="import-panel hidden" id="importPanel">
             <h4>Import senarai murid (CSV)</h4>
             <p>
-              Baris pertama mesti tajuk: <code>nama,kelas,kod</code>. Lajur <code>kod</code> boleh
-              ditinggalkan — sistem akan jana kod automatik. Contoh:
+              Baris pertama mesti tajuk. Lajur wajib: <code>nama,kelas</code>. Lajur pilihan:
+              <code>kod</code> (sistem jana automatik jika kosong), <code>anugerah</code>,
+              <code>foto</code>. Contoh:
             </p>
-            <textarea id="csvText" spellcheck="false" placeholder="nama,kelas,kod&#10;Ahmad Zafran,6 AMANAH,NM26-0031&#10;Nur Aisyah,6 AMANAH,"></textarea>
+            <textarea id="csvText" spellcheck="false" placeholder="nama,kelas,kod,anugerah&#10;Ahmad Zafran,6 AMANAH,NM26-0031,ANUGERAH PELAJAR CEMERLANG&#10;Nur Aisyah,6 AMANAH,,ANUGERAH KEPEMIMPINAN"></textarea>
             <div class="import-actions">
               <label class="btn btn-sm file-label">
                 Pilih fail CSV
@@ -104,13 +115,23 @@
               </label>
               <button class="btn btn-sm btn-gold" type="button" id="btnImportRun">Import ke sistem</button>
               <button class="btn btn-sm btn-ghost" type="button" id="btnTemplate">Muat turun templat</button>
+              <label class="check-inline">
+                <input type="checkbox" id="importKemaskini" />
+                <span>Kemas kini murid sedia ada ikut <b>kod</b></span>
+              </label>
               <span class="muted" id="importStatus" style="font-size: 0.8rem"></span>
             </div>
+            <p style="margin-top: 12px">
+              Untuk isi anugerah beramai-ramai tanpa mengusik nama/kelas/gambar: CSV cukup
+              <code>kod,anugerah</code> dan aktifkan kotak <b>Kemas kini ikut kod</b> di atas.
+            </p>
             <p style="margin-top: 12px">
               Gambar pukal: nama fail gambar mesti sama dengan kod murid, contoh
               <code>NM26-0001.jpg</code>.
             </p>
           </div>
+
+          <div class="anugerah-ringkasan" id="anugerahRingkasan"></div>
 
           <div class="table-wrap panel">
             <table class="data">
@@ -118,6 +139,7 @@
                 <tr>
                   <th>Murid</th>
                   <th>Kelas</th>
+                  <th>Anugerah</th>
                   <th>Kod QR</th>
                   <th>Status</th>
                   <th style="text-align: right">Tindakan</th>
@@ -275,6 +297,65 @@
           <div class="qr-preview-grid" id="qrPreview"></div>
         </section>
 
+        <!-- SENARAI MC ------------------------------------------------- -->
+        <section class="tab-section" id="tab-mc">
+          <div class="page-head">
+            <div>
+              <p class="eyebrow">Senarai MC</p>
+              <h1>Senarai nama &amp; anugerah untuk pengacara majlis</h1>
+              <p>
+                Disediakan ikut kelas (atau ikut anugerah) supaya pengacara majlis boleh membaca
+                dengan lancar. Hanya murid yang ada anugerah dipaparkan secara lalai.
+              </p>
+            </div>
+            <div class="page-actions">
+              <button class="btn btn-gold" type="button" id="btnMcCetak">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2" /><rect x="6" y="14" width="12" height="7" /></svg>
+                Cetak / Simpan PDF
+              </button>
+              <a class="btn" href="/api/mc.csv" id="mcCsvLink">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 4v12M7 11l5 5 5-5" /><path d="M4 20h16" /></svg>
+                Muat turun CSV
+              </a>
+            </div>
+          </div>
+
+          <div class="toolbar">
+            <label class="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+              <input id="mcCari" class="input" type="search" placeholder="Cari nama, kelas atau anugerah…" />
+            </label>
+            <select id="mcKelas" class="select" aria-label="Tapis kelas">
+              <option value="">Semua kelas</option>
+            </select>
+            <select id="mcAnugerah" class="select" aria-label="Tapis anugerah">
+              <option value="">Semua anugerah</option>
+            </select>
+            <select id="mcSusun" class="select" aria-label="Susunan">
+              <option value="kelas">Susun: Kelas → Anugerah → Nama</option>
+              <option value="anugerah">Susun: Anugerah → Kelas → Nama</option>
+            </select>
+            <label class="check-inline">
+              <input type="checkbox" id="mcHanya" checked />
+              <span>Hanya ada anugerah</span>
+            </label>
+            <span class="muted" id="mcJumlah" style="font-size: 0.8rem"></span>
+          </div>
+
+          <div class="panel panel-pad" style="margin-bottom: 18px">
+            <div class="panel-title">Bilangan mengikut anugerah</div>
+            <div class="anugerah-ringkasan" id="mcRingkasan"></div>
+          </div>
+
+          <div class="mc-dokumen" id="mcDokumen"></div>
+
+          <div class="empty-state hidden" id="mcEmpty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 3l1.6 3.6L17 8l-3.4 1.4L12 13l-1.6-3.6L7 8l3.4-1.4L12 3z" /></svg>
+            <b>Tiada anugerah lagi</b>
+            <p>Isi medan Anugerah dalam Admin → Murid, atau import CSV dengan lajur anugerah.</p>
+          </div>
+        </section>
+
         <!-- TETAPAN -------------------------------------------------- -->
         <section class="tab-section" id="tab-tetapan">
           <div class="page-head">
@@ -349,6 +430,20 @@
                   </div>
                   <label class="switch">
                     <input type="checkbox" id="setKehadiran" name="papar_kehadiran" />
+                    <span></span>
+                  </label>
+                </div>
+
+                <div class="switch-row">
+                  <div class="switch-copy">
+                    <b>Papar anugerah pada skrin</b>
+                    <small>
+                      Tunjukkan plat anugerah di bawah nama murid. Matikan sementara untuk sesi yang
+                      tidak melibatkan penyampaian anugerah — data anugerah tidak dipadam.
+                    </small>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setAnugerah" name="papar_anugerah" />
                     <span></span>
                   </label>
                 </div>
@@ -532,6 +627,20 @@
             <label for="studentKod">Kod QR (pilihan)</label>
             <input id="studentKod" class="input" placeholder="Kosongkan untuk jana automatik" />
             <small class="muted" style="font-size: 0.75rem">Kod ini akan dicetak sebagai QR. Biarkan kosong untuk kod automatik.</small>
+          </div>
+          <div class="field">
+            <label for="studentAnugerah">Anugerah (pilihan)</label>
+            <input
+              id="studentAnugerah"
+              class="input"
+              list="anugerahList"
+              maxlength="90"
+              placeholder="cth. ANUGERAH PELAJAR CEMERLANG"
+            />
+            <datalist id="anugerahList"></datalist>
+            <small class="muted" style="font-size: 0.75rem">
+              Terpapar sebagai plat emas di bawah nama pada skrin projektor. Kosongkan jika tiada.
+            </small>
           </div>
         </div>
         <div class="modal-foot">

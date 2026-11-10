@@ -812,6 +812,218 @@ body.admin {
   color: var(--muted);
 }
 
+/* Anugerah --------------------------------------------------------- */
+
+.anugerah-pill {
+  display: inline-block;
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 1px solid rgba(216, 180, 95, 0.42);
+  border-radius: 6px;
+  background: rgba(216, 180, 95, 0.1);
+  color: #f0dca8;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+
+.anugerah-ringkasan {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 242, 231, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cream);
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.chip:hover {
+  border-color: rgba(216, 180, 95, 0.55);
+  background: rgba(216, 180, 95, 0.1);
+}
+
+.chip b {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.chip span {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--gold-2);
+}
+
+.chip-kosong b {
+  color: #ffd2a6;
+}
+
+.check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.check-inline input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--gold);
+}
+
+/* Senarai MC ------------------------------------------------------- */
+
+.mc-dokumen {
+  display: grid;
+  gap: 26px;
+}
+
+.mc-kumpulan {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.mc-tajuk {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 1.05rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-2);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid rgba(216, 180, 95, 0.35);
+}
+
+.mc-jadual td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(247, 242, 231, 0.06);
+  vertical-align: middle;
+}
+
+.mc-bil {
+  width: 46px;
+  font-family: ui-monospace, Consolas, monospace;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.mc-nama b {
+  display: block;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+}
+
+.mc-nama small {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.mc-anugerah {
+  color: #f0dca8;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+
+.mc-kod {
+  width: 130px;
+  text-align: right;
+}
+
+/* Cetak senarai MC -------------------------------------------------- */
+
+@media print {
+  .sidebar,
+  .page-actions,
+  .toolbar,
+  .anugerah-ringkasan,
+  #tab-murid,
+  #tab-kehadiran,
+  #tab-kad,
+  #tab-tetapan,
+  #tab-demo,
+  #toast,
+  .panel-title,
+  .modal {
+    display: none !important;
+  }
+
+  body.print-mc #tab-mc {
+    display: block !important;
+  }
+
+  .admin-shell {
+    display: block !important;
+  }
+
+  .main {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .mc-tajuk {
+    color: #0b1b33;
+    border-color: #b08a35;
+    font-size: 1.15rem;
+  }
+
+  .mc-jadual td {
+    border-color: rgba(0, 0, 0, 0.14);
+    padding: 6px 8px;
+  }
+
+  .mc-nama b,
+  .mc-anugerah,
+  .mc-bil,
+  .mc-nama small,
+  .mc-kod,
+  .mc-jadual td {
+    color: #0b1b33 !important;
+  }
+
+  .mc-jadual {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .mc-kumpulan {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 18px;
+  }
+
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+}
+
 /* Demo ------------------------------------------------------------- */
 
 .demo-list {

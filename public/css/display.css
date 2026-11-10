@@ -546,6 +546,61 @@ body {
   }
 }
 
+/* Plat anugerah (hanya muncul bila murid ada anugerah) -------------- */
+
+.anugerah {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.4vw, 22px);
+  max-width: 100%;
+  min-width: 0;
+  margin-bottom: 2vh;
+  padding: 1.3vh 1.8vw;
+  border: 1px solid rgba(216, 180, 95, 0.45);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(216, 180, 95, 0.16), rgba(216, 180, 95, 0.05));
+  box-shadow: inset 0 0 26px rgba(216, 180, 95, 0.1), 0 12px 34px rgba(0, 0, 0, 0.38);
+}
+
+.anugerah-ikon {
+  flex: 0 0 auto;
+  width: clamp(26px, 4.6vh, 52px);
+  height: clamp(26px, 4.6vh, 52px);
+  color: var(--gold-2);
+  filter: drop-shadow(0 0 12px rgba(216, 180, 95, 0.35));
+}
+
+.anugerah-teks {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--serif);
+  font-size: clamp(0.95rem, 2.9vh, 2.05rem);
+  line-height: 1.18;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: #f5e6bd;
+  text-wrap: balance;
+  overflow-wrap: break-word;
+  text-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Tajuk anugerah sederhana & panjang: kecilkan supaya plat kekal kemas */
+.anugerah.a-sederhana .anugerah-teks {
+  font-size: clamp(0.85rem, 2.35vh, 1.65rem);
+  letter-spacing: 0.085em;
+}
+
+.anugerah.a-panjang .anugerah-teks {
+  font-size: clamp(0.76rem, 1.95vh, 1.35rem);
+  letter-spacing: 0.06em;
+  line-height: 1.22;
+}
+
+/* Bila ada anugerah, garis nama rapat sedikit ke plat */
+.reveal.punya-anugerah .name-rule {
+  margin-bottom: 1.7vh;
+}
+
 .kelas {
   display: inline-flex;
   align-items: center;
@@ -600,6 +655,10 @@ body {
 
 .reveal.is-in .name {
   animation: masuk-kanan 0.85s 0.35s cubic-bezier(0.16, 0.9, 0.24, 1) both;
+}
+
+.reveal.is-in .anugerah {
+  animation: masuk-kanan 0.75s 0.48s cubic-bezier(0.16, 0.9, 0.24, 1) both;
 }
 
 .reveal.is-in .kelas {
@@ -882,6 +941,16 @@ body {
   .name-rule {
     margin: 1.8vh auto 1.6vh;
     background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .anugerah {
+    justify-content: center;
+    margin-bottom: 1.6vh;
+    padding: 1vh 1.4rem;
+  }
+
+  .anugerah-teks {
+    font-size: clamp(0.8rem, 3.4vw, 1.2rem);
   }
 
   @keyframes rule {

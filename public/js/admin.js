@@ -1,7 +1,7 @@
 'use strict';
 
 (function admin() {
-  const { api, toast, esc, fmtTime, initials } = window.UI;
+  const { api, toast, esc, fmtTime, initials, debounce } = window.UI;
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => Array.from(document.querySelectorAll(s));
 
@@ -10,12 +10,20 @@
     settings: {},
     stats: { total: 0, hadir: 0, belum: 0, perClass: [] },
     students: [],
+    senaraiAnugerah: [],
+    mc: { kumpulan: [], jumlah: 0 },
+    mcKelas: '',
+    mcAnugerah: '',
+    mcCari: '',
+    mcSusun: 'kelas',
+    mcHanya: true,
     attendance: [],
     tab: 'murid',
     search: '',
     filterKelas: '',
     searchAtt: '',
     filterPeringkat: '',
+    filterAnugerah: '',
     searchDemo: '',
     photoTarget: null,
     qrKelas: '',
@@ -41,6 +49,7 @@
     if (history.replaceState) history.replaceState(null, '', `#${tab}`);
 
     if (tab === 'kehadiran') loadAttendance();
+    if (tab === 'mc') loadMc();
     if (tab === 'kad') {
       state.qrKelas = $('#qrKelas').value;
       renderQrPreview();
@@ -70,6 +79,9 @@
     $('#navMuridCount').textContent = total;
     $('#navHadirCount').textContent = hadir;
     $('#sideHadir').textContent = `${hadir} / ${total}`;
+
+    const navMc = $('#navMcCount');
+    if (navMc) navMc.textContent = state.stats.beranugerah ?? 0;
 
     if ($('#aTotal')) {
       $('#aTotal').textContent = total;
@@ -135,8 +147,13 @@
     const q = state.search.toLowerCase();
     const list = state.students.filter((s) => {
       if (state.filterKelas && s.kelas !== state.filterKelas) return false;
+      if (state.filterAnugerah === 'ada' && !(s.anugerah || '').trim()) return false;
+      if (state.filterAnugerah === 'tiada' && (s.anugerah || '').trim()) return false;
+      if (state.filterAnugerah && state.filterAnugerah !== 'ada' && state.filterAnugerah !== 'tiada') {
+        if ((s.anugerah || '').trim().toUpperCase() !== state.filterAnugerah.toUpperCase()) return false;
+      }
       if (!q) return true;
-      return `${s.nama} ${s.kelas} ${s.kod}`.toLowerCase().includes(q);
+      return `${s.nama} ${s.kelas} ${s.kod} ${s.anugerah || ''}`.toLowerCase().includes(q);
     });
 
     const tbody = $('#studentsBody');
@@ -159,6 +176,11 @@
             </div>
           </td>
           <td>${esc(s.kelas)}</td>
+          <td>${
+            s.anugerah
+              ? `<span class="anugerah-pill">${esc(s.anugerah)}</span>`
+              : '<span class="muted" style="font-size:.78rem">—</span>'
+          }</td>
           <td class="kod-cell">${esc(s.kod)}</td>
           <td>${
             s.dipapar
@@ -193,13 +215,87 @@
     try {
       const data = await api('/api/students');
       state.students = data.students || [];
+      state.senaraiAnugerah = data.senaraiAnugerah || [];
       updateStats(data);
       renderStudents();
       renderQrPreview();
       renderDemo();
+      renderAnugerahOptions();
+      renderAnugerahRingkasan();
+      renderMcKelasOptions();
+      if (state.tab === 'mc') loadMc();
     } catch (err) {
       toast(err.message, 'bad');
     }
+  }
+
+  /* Datalist + penapis anugerah (nilai unik daripada pangkalan data) */
+  function renderAnugerahOptions() {
+    const senarai = state.senaraiAnugerah || [];
+
+    const dl = $('#anugerahList');
+    if (dl) {
+      dl.innerHTML = senarai
+        .map((r) => `<option value="${esc(r.anugerah)}">${r.jumlah} murid</option>`)
+        .join('');
+    }
+
+    const penapis = $('#filterAnugerah');
+    if (penapis) {
+      const pilih = penapis.value;
+      penapis.innerHTML =
+        '<option value="">Semua anugerah</option>' +
+        '<option value="ada">Ada anugerah</option>' +
+        '<option value="tiada">Belum ada anugerah</option>' +
+        senarai.map((r) => `<option value="${esc(r.anugerah)}">${esc(r.anugerah)} (${r.jumlah})</option>`).join('');
+      penapis.value = [ '', 'ada', 'tiada', ...senarai.map((r) => r.anugerah) ].includes(pilih) ? pilih : '';
+
+      const lain = $('#mcAnugerah');
+      if (lain) {
+        const pilihLain = lain.value;
+        lain.innerHTML =
+          '<option value="">Semua anugerah</option>' +
+          senarai.map((r) => `<option value="${esc(r.anugerah)}">${esc(r.anugerah)} (${r.jumlah})</option>`).join('');
+        lain.value = ['', ...senarai.map((r) => r.anugerah)].includes(pilihLain) ? pilihLain : '';
+      }
+    }
+  }
+
+  /* Ringkasan "siapa belum ada anugerah" — penting semasa rehearsal */
+  function renderAnugerahRingkasan() {
+    const host = $('#anugerahRingkasan');
+    const hostMc = $('#mcRingkasan');
+    const senarai = state.senaraiAnugerah || [];
+    const belum = (state.stats.total ?? 0) - (state.stats.beranugerah ?? 0);
+
+    const teras = senarai.length
+      ? senarai
+          .map(
+            (r) => `<button class="chip chip-anugerah" type="button" data-anugerah="${esc(r.anugerah)}">
+                <b>${esc(r.anugerah)}</b><span>${r.jumlah}</span>
+              </button>`
+          )
+          .join('') +
+        `<button class="chip chip-kosong" type="button" data-anugerah="tiada">
+            <b>Belum ada anugerah</b><span>${belum}</span>
+          </button>`
+      : `<span class="muted" style="font-size:.82rem">
+            Belum ada anugerah direkod —${belum ? ` semua ${belum} murid belum diisi.` : ''}
+         </span>`;
+
+    if (host) host.innerHTML = teras;
+    if (hostMc) hostMc.innerHTML = teras;
+  }
+
+  /* Klik chip ringkasan → tapis senarai mengikut anugerah itu */
+  function pasChipAnugerah(event) {
+    const chip = event.target.closest('[data-anugerah]');
+    if (!chip) return;
+    state.filterAnugerah = chip.dataset.anugerah;
+    const penapis = $('#filterAnugerah');
+    if (penapis) penapis.value = state.filterAnugerah;
+    renderStudents();
+    switchTab('murid');
   }
 
   $('#searchMurid').addEventListener('input', (event) => {
@@ -209,6 +305,11 @@
 
   $('#filterKelas').addEventListener('change', (event) => {
     state.filterKelas = event.target.value;
+    renderStudents();
+  });
+
+  $('#filterAnugerah').addEventListener('change', (event) => {
+    state.filterAnugerah = event.target.value;
     renderStudents();
   });
 
@@ -233,6 +334,7 @@
     $('#studentNama').value = student ? student.nama : '';
     $('#studentKelas').value = student ? student.kelas : '';
     $('#studentKod').value = student ? student.kod : '';
+    $('#studentAnugerah').value = student ? student.anugerah || '' : '';
     $('#studentModalTitle').textContent = student ? 'Sunting murid' : 'Tambah murid';
     $('#studentModal').showModal();
     setTimeout(() => $('#studentNama').focus(), 40);
@@ -248,6 +350,7 @@
     const payload = {
       nama: $('#studentNama').value.trim(),
       kelas: $('#studentKelas').value.trim(),
+      anugerah: $('#studentAnugerah').value.trim(),
       kod: $('#studentKod').value.trim(),
     };
 
@@ -368,10 +471,19 @@
     status.textContent = 'Mengimport…';
 
     try {
-      const result = await api('/api/import', { method: 'POST', body: { csv } });
-      const parts = [`${result.added} murid ditambah`];
-      if (result.skipped.length) parts.push(`${result.skipped.length} dilangkau (kod sama)`);
+      const mod = $('#importKemaskini') && $('#importKemaskini').checked ? 'kemas kini' : 'baharu';
+      const result = await api('/api/import', { method: 'POST', body: { csv, mod } });
+
+      const parts = [];
+      if (result.mod === 'kemas kini') {
+        parts.push(`${result.dikemaskini} murid dikemas kini`);
+        if (result.skipped.length) parts.push(`${result.skipped.length} dilangkau (kod tiada)`);
+      } else {
+        parts.push(`${result.added} murid ditambah`);
+        if (result.skipped.length) parts.push(`${result.skipped.length} dilangkau (kod sama)`);
+      }
       if (result.errors.length) parts.push(`${result.errors.length} ralat`);
+      parts.push(result.lajurAnugerah ? 'lajur anugerah dibaca ✓' : 'tiada lajur anugerah');
       status.textContent = parts.join(' · ');
       toast(parts.join(' · '), result.errors.length ? 'warn' : 'ok');
       if (result.errors.length) console.warn(result.errors);
@@ -384,10 +496,10 @@
 
   $('#btnTemplate').addEventListener('click', () => {
     const csv =
-      'nama,kelas,kod\n' +
-      'Ahmad Zafran bin Ismail,6 AMANAH,\n' +
-      'Nur Aisyah binti Rahman,6 AMANAH,\n' +
-      'Muhammad Irfan bin Yusof,6 BESTARI,\n';
+      'nama,kelas,kod,anugerah\n' +
+      'Ahmad Zafran bin Ismail,6 AMANAH,,\n' +
+      'Nur Aisyah binti Rahman,6 AMANAH,,ANUGERAH PELAJAR CEMERLANG\n' +
+      'Muhammad Irfan bin Yusof,6 BESTARI,,ANUGERAH KEPEMIMPINAN\n';
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -544,6 +656,125 @@
   });
 
   /* ================================================================ */
+  /*  Senarai MC (pengacara majlis)                                  */
+  /* ================================================================ */
+
+  const MC_QUERY = () => {
+    const q = new URLSearchParams();
+    if (state.mcKelas) q.set('kelas', state.mcKelas);
+    if (state.mcAnugerah) q.set('anugerah', state.mcAnugerah);
+    if (state.mcCari) q.set('q', state.mcCari);
+    if (state.mcSusun) q.set('susun', state.mcSusun);
+    if (!state.mcHanya) q.set('hanya', '0');
+    return q.toString();
+  };
+
+  async function loadMc() {
+    try {
+      const data = await api('/api/mc?' + MC_QUERY());
+      state.mc = data;
+      renderMc();
+      const nav = $('#navMcCount');
+      if (nav) nav.textContent = data.jumlah;
+      const kiraan = $('#mcJumlah');
+      if (kiraan) {
+        kiraan.textContent = `${data.jumlah} nama` + (data.hanya ? ' (hanya ada anugerah)' : ' (semua murid)');
+      }
+      const csv = $('#mcCsvLink');
+      if (csv) csv.href = '/api/mc.csv?' + MC_QUERY();
+    } catch (err) {
+      toast(err.message, 'bad');
+    }
+  }
+
+  function renderMc() {
+    const host = $('#mcDokumen');
+    const empty = $('#mcEmpty');
+    if (!host) return;
+
+    const kumpulan = state.mc.kumpulan || [];
+    if (!kumpulan.length) {
+      host.innerHTML = '';
+      if (empty) empty.classList.remove('hidden');
+      return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    host.innerHTML = kumpulan
+      .map(
+        (k) => `<section class="mc-kumpulan">
+          <h3 class="mc-tajuk">${esc(k.tajuk)}</h3>
+          <table class="data mc-jadual">
+            <tbody>
+              ${k.ahli
+                .map(
+                  (a) => `<tr>
+                    <td class="mc-bil">${a.bil}</td>
+                    <td class="mc-nama"><b>${esc(a.nama)}</b>${
+                      state.mc.susun === 'anugerah' ? '' : `<small>${esc(a.kelas)}</small>`
+                    }</td>
+                    <td class="mc-anugerah">${a.anugerah ? esc(a.anugerah) : '<span class="muted">—</span>'}</td>
+                    <td class="mc-kod kod-cell">${esc(a.kod)}</td>
+                  </tr>`
+                )
+                .join('')}
+            </tbody>
+          </table>
+        </section>`
+      )
+      .join('');
+  }
+
+  $('#mcCari')?.addEventListener('input', debounce(() => {
+    state.mcCari = $('#mcCari').value.trim();
+    loadMc();
+  }, 300));
+
+  ['mcKelas', 'mcAnugerah', 'mcSusun'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      state.mcKelas = $('#mcKelas').value;
+      state.mcAnugerah = $('#mcAnugerah').value;
+      state.mcSusun = $('#mcSusun').value;
+      loadMc();
+    });
+  });
+
+  $('#mcHanya')?.addEventListener('change', (event) => {
+    state.mcHanya = event.target.checked;
+    loadMc();
+  });
+
+  $('#btnMcCetak')?.addEventListener('click', () => {
+    renderMc();
+    document.body.classList.add('print-mc');
+    const selesai = () => {
+      document.body.classList.remove('print-mc');
+      window.removeEventListener('afterprint', selesai);
+    };
+    window.addEventListener('afterprint', selesai);
+    window.print();
+    setTimeout(selesai, 4000);
+  });
+
+  /* Padankan dropdown kelas MC dengan senarai kelas sedia ada */
+  function renderMcKelasOptions() {
+    const select = $('#mcKelas');
+    if (!select) return;
+    const kelas = [...new Set(state.students.map((s) => s.kelas))].sort();
+    const pilih = select.value;
+    select.innerHTML =
+      '<option value="">Semua kelas</option>' +
+      kelas.map((c) => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    select.value = kelas.includes(pilih) ? pilih : '';
+  }
+
+  /* Klik chip anugerah dalam mana-mana ringkasan → tapis & buka tab murid */
+  ['#anugerahRingkasan', '#mcRingkasan'].forEach((penentu) => {
+    const el = document.querySelector(penentu);
+    el?.addEventListener('click', pasChipAnugerah);
+  });
+
+  /* ================================================================ */
   /*  Kad QR                                                           */
   /* ================================================================ */
 
@@ -604,6 +835,7 @@
     $('#setBunyi').checked = settings.bunyi === '1';
     $('#setKehadiran').checked = settings.papar_kehadiran === '1';
     $('#setFormal').checked = settings.mod_formal !== '0';
+    $('#setAnugerah').checked = settings.papar_anugerah !== '0';
     $('#setSheetsUrl').value = settings.sheets_url || '';
     $('#setSheetsKunci').value = settings.sheets_kunci || '';
     $('#setSheetsAuto').checked = settings.sheets_auto !== '0';
@@ -669,6 +901,7 @@
       logo_saiz: $('#setLogoSaiz').value,
       bunyi: $('#setBunyi').checked ? '1' : '0',
       mod_formal: $('#setFormal').checked ? '1' : '0',
+      papar_anugerah: $('#setAnugerah').checked ? '1' : '0',
       papar_kehadiran: $('#setKehadiran').checked ? '1' : '0',
     };
 
@@ -1057,7 +1290,7 @@
 
   (async function boot() {
     const hash = (location.hash || '').replace('#', '');
-    if (['murid', 'kehadiran', 'kad', 'tetapan', 'demo'].includes(hash)) switchTab(hash);
+    if (['murid', 'kehadiran', 'kad', 'mc', 'tetapan', 'demo'].includes(hash)) switchTab(hash);
 
     try {
       const info = await api('/api/bootstrap');

@@ -202,6 +202,7 @@ function publicStudent(student) {
     kod: student.kod,
     nama: student.nama,
     kelas: student.kelas,
+    anugerah: student.anugerah || null,
     foto: student.foto || `/api/avatar/${encodeURIComponent(student.id)}`,
   };
 }
@@ -410,7 +411,8 @@ app.get('/api/bootstrap', (req, res) => {
 app.get('/api/students', (req, res) => {
   const q = String(req.query.q || '').trim();
   const kelas = String(req.query.kelas || '').trim();
-  const rows = store.listStudents({ q, kelas });
+  const anugerah = String(req.query.anugerah || '').trim();
+  const rows = store.listStudents({ q, kelas, anugerah });
   res.json({
     students: rows.map((s) => ({
       ...publicStudent(s),
@@ -423,8 +425,14 @@ app.get('/api/students', (req, res) => {
       paparLabel: s.papar_at ? formatTime(s.papar_at) : null,
       created_at: s.created_at,
     })),
+    senaraiAnugerah: store.senaraiAnugerah(),
     ...store.stats(),
   });
+});
+
+/* Nilai anugerah unik + bilangannya (datalist, penapis, senarai MC). */
+app.get('/api/anugerah', (req, res) => {
+  res.json({ senarai: store.senaraiAnugerah(), ...store.stats() });
 });
 
 app.get('/api/students/:id', (req, res) => {
@@ -446,9 +454,12 @@ app.post('/api/students', (req, res) => {
   if (clash) return res.status(409).json({ error: `Kod ${kod} sudah digunakan.` });
 
   const id = 'm' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
+  const anugerah = store.normalisasiAnugerah(req.body.anugerah);
   store.db
-    .prepare('INSERT INTO students (id, kod, nama, kelas, foto, created_at) VALUES (?, ?, ?, ?, NULL, ?)')
-    .run(id, kod, nama, kelas, Date.now());
+    .prepare(
+      'INSERT INTO students (id, kod, nama, kelas, foto, anugerah, created_at) VALUES (?, ?, ?, ?, NULL, ?, ?)'
+    )
+    .run(id, kod, nama, kelas, anugerah, Date.now());
 
   const student = store.getStudentById(id);
   sendEvent('students', { reason: 'add', ...store.stats() });
@@ -472,9 +483,14 @@ app.put('/api/students/:id', (req, res) => {
     .get(kod, existing.id);
   if (clash) return res.status(409).json({ error: `Kod ${kod} sudah digunakan.` });
 
+  /* anugerah: jika kunci tidak dihantar langsung, nilai lama Kekal;
+     string kosong bermaksud deliberate kosongkan. */
+  const anugerah =
+    req.body.anugerah === undefined ? existing.anugerah : store.normalisasiAnugerah(req.body.anugerah);
+
   store.db
-    .prepare('UPDATE students SET nama = ?, kelas = ?, kod = ? WHERE id = ?')
-    .run(nama, kelas, kod, existing.id);
+    .prepare('UPDATE students SET nama = ?, kelas = ?, kod = ?, anugerah = ? WHERE id = ?')
+    .run(nama, kelas, kod, anugerah, existing.id);
 
   sendEvent('students', { reason: 'edit', ...store.stats() });
   res.json({ student: publicStudent(store.getStudentById(existing.id)) });
@@ -549,21 +565,71 @@ app.post('/api/import', (req, res) => {
     kelas: header.findIndex((h) => ['kelas', 'class', 'darjah'].includes(h)),
     kod: header.findIndex((h) => ['kod', 'code', 'kodqr', 'id'].includes(h)),
     foto: header.findIndex((h) => ['foto', 'gambar', 'photo', 'image'].includes(h)),
+    anugerah: header.findIndex((h) =>
+      ['anugerah', 'award', 'title', 'tajukanugerah', 'anugerahmurid', 'honor', 'honour'].includes(h)
+    ),
   };
 
-  if (idx.nama === -1 || idx.kelas === -1) {
+  /* mod = 'kemas kini': ikut kod, hanya sunting medan yang ada lajurnya.
+     Berguna untuk import fail anugerah sahaja tanpa usik nama/kelas/gambar. */
+  const modKemasKini = ['kemas kini', 'kemaskini', 'update'].includes(
+    String(req.body.mod || '').toLowerCase().trim()
+  );
+
+  if (modKemasKini && idx.kod === -1) {
+    return res.status(400).json({ error: 'Mod kemas kini memerlukan lajur "kod".' });
+  }
+
+  if (!modKemasKini && (idx.nama === -1 || idx.kelas === -1)) {
     return res.status(400).json({
       error: 'Tajuk CSV mesti ada sekurang-kurangnya lajur "nama" dan "kelas".',
     });
   }
 
   const insert = store.db.prepare(
-    'INSERT INTO students (id, kod, nama, kelas, foto, created_at) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO students (id, kod, nama, kelas, foto, anugerah, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
   );
-  const findKod = store.db.prepare('SELECT id FROM students WHERE UPPER(kod) = ?');
+  const findKod = store.db.prepare('SELECT * FROM students WHERE UPPER(kod) = ?');
+  const kemaskiniAnugerah = store.db.prepare('UPDATE students SET anugerah = ? WHERE id = ?');
+  const kemaskiniNamaKelas = store.db.prepare('UPDATE students SET nama = ?, kelas = ? WHERE id = ?');
   let added = 0;
+  let dikemaskini = 0;
   const skipped = [];
   const errors = [];
+
+  if (modKemasKini) {
+    for (let i = 1; i < rows.length; i += 1) {
+      const row = rows[i];
+      const kod = normalizeKod(row[idx.kod]);
+      if (!kod) {
+        errors.push(`Baris ${i + 1}: kod kosong.`);
+        continue;
+      }
+      const sedia = findKod.get(kod);
+      if (!sedia) {
+        skipped.push(`${kod} (tiada dalam senarai)`);
+        continue;
+      }
+      if (idx.anugerah >= 0) {
+        kemaskiniAnugerah.run(store.normalisasiAnugerah(row[idx.anugerah]), sedia.id);
+      }
+      if (idx.nama >= 0 && idx.kelas >= 0 && (row[idx.nama] || '').trim() && (row[idx.kelas] || '').trim()) {
+        kemaskiniNamaKelas.run(row[idx.nama].trim(), row[idx.kelas].trim(), sedia.id);
+      }
+      dikemaskini += 1;
+    }
+
+    if (dikemaskini) sendEvent('students', { reason: 'import-kemaskini', ...store.stats() });
+    return res.json({
+      mod: 'kemas kini',
+      dikemaskini,
+      added: 0,
+      skipped,
+      errors,
+      lajurAnugerah: idx.anugerah >= 0,
+      ...store.stats(),
+    });
+  }
 
   for (let i = 1; i < rows.length; i += 1) {
     const row = rows[i];
@@ -573,6 +639,8 @@ app.post('/api/import', (req, res) => {
       errors.push(`Baris ${i + 1}: nama atau kelas kosong.`);
       continue;
     }
+
+    const anugerah = idx.anugerah >= 0 ? store.normalisasiAnugerah(row[idx.anugerah]) : null;
 
     let kod = idx.kod >= 0 ? normalizeKod(row[idx.kod]) : '';
     if (!kod) kod = store.nextKod();
@@ -588,12 +656,19 @@ app.post('/api/import', (req, res) => {
     }
 
     const id = 'm' + crypto.randomUUID().replace(/-/g, '').slice(0, 12);
-    insert.run(id, kod, nama, kelas, foto, Date.now());
+    insert.run(id, kod, nama, kelas, foto, anugerah, Date.now());
     added += 1;
   }
 
-  sendEvent('students', { reason: 'import', ...store.stats() });
-  res.json({ added, skipped, errors, ...store.stats() });
+  if (added) sendEvent('students', { reason: 'import', ...store.stats() });
+  res.json({
+    added,
+    skipped,
+    errors,
+    lajurAnugerah: idx.anugerah >= 0,
+    dikemaskini: 0,
+    ...store.stats(),
+  });
 });
 
 /* ------------------------------------------------------------------ */
@@ -710,7 +785,14 @@ app.get('/api/attendance', (req, res) => {
     },
     attendance: rows.map((r) => ({
       id: r.id,
-      student: publicStudent({ id: r.student_id, kod: r.kod, nama: r.nama, kelas: r.kelas, foto: r.foto }),
+      student: publicStudent({
+        id: r.student_id,
+        kod: r.kod,
+        nama: r.nama,
+        kelas: r.kelas,
+        foto: r.foto,
+        anugerah: r.anugerah,
+      }),
       scanned_at: r.scanned_at,
       masa: formatTime(r.scanned_at),
       source: r.source,
@@ -729,7 +811,18 @@ app.get('/api/attendance.csv', (req, res) => {
   const rows = store.listAttendance();
   const labels = { scanner: 'Mesin scanner', kamera: 'Kamera fon', manual: 'Taip manual' };
   const lines = [
-    ['Bil', 'Nama', 'Kelas', 'Kod', 'Status', 'Daftar hadir', 'Sumber daftar', 'Dipaparkan', 'Sumber papar'].join(','),
+    [
+      'Bil',
+      'Nama',
+      'Kelas',
+      'Kod',
+      'Anugerah',
+      'Status',
+      'Daftar hadir',
+      'Sumber daftar',
+      'Dipaparkan',
+      'Sumber papar',
+    ].join(','),
   ];
   rows
     .slice()
@@ -749,6 +842,7 @@ app.get('/api/attendance.csv', (req, res) => {
           r.nama,
           r.kelas,
           r.kod,
+          r.anugerah || '-',
           status,
           r.daftar_at ? formatTime(r.daftar_at) : '-',
           r.daftar_at ? labels[r.daftar_source] || r.daftar_source || '' : '-',
@@ -902,24 +996,13 @@ app.post('/api/sheets/uji', async (_req, res) => {
   if (!url || !sheetsUrlSah(url)) {
     return res.status(400).json({ error: 'Isi URL Web App Apps Script dahulu.' });
   }
+  /* GUNA GET (doGet) supaya ujian TIDAK menulis baris ke sheet anda. */
   try {
     const penutup = new AbortController();
     const tamat = setTimeout(() => penutup.abort(), 12000);
     let r;
     try {
-      r = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          perintah: 'uji',
-          sumber: 'Sistem Nama Majlis',
-          kunci: String(settings.sheets_kunci || ''),
-          masa_hantar: Date.now(),
-          baris: [{ kod: 'UJIAN', nama: 'Ujian sambungan', kelas: '-', mod: 'uji', sumber: 'sistem', masa: Date.now() }],
-        }),
-        signal: penutup.signal,
-        redirect: 'follow',
-      });
+      r = await fetch(url, { method: 'GET', signal: penutup.signal, redirect: 'follow' });
     } finally {
       clearTimeout(tamat);
     }
@@ -928,12 +1011,17 @@ app.post('/api/sheets/uji', async (_req, res) => {
     try {
       json = JSON.parse(teks);
     } catch {
-      /* bukan JSON */
+      /* bukan JSON — biasanya halaman amaran kebenaran */
     }
+    const mesejLemah =
+      !json && (r.status === 403 || teks.includes('<title>'))
+        ? 'Apps Script menolak akses — deploy sebagai "Anyone".'
+        : undefined;
     return res.json({
       ok: r.ok && json && json.ok === true,
       http: r.status,
       respons: json || teks.slice(0, 220),
+      ...(mesejLemah ? { error: mesejLemah } : {}),
     });
   } catch (err) {
     return res.json({ ok: false, error: err.message });
@@ -1026,6 +1114,94 @@ setInterval(() => {
 }, 25000).unref?.();
 
 /* ------------------------------------------------------------------ */
+/*  Senarai pengacara majlis (MC)                                      */
+/* ------------------------------------------------------------------ */
+
+function mcRows({ kelas = '', q = '', anugerah = '', hanya = true, susun = 'kelas' } = {}) {
+  const rows = store
+    .listStudents({ q, kelas, anugerah })
+    .filter((s) => (hanya ? s.anugerah && String(s.anugerah).trim() : true));
+
+  const penyusun =
+    susun === 'anugerah'
+      ? (a, b) =>
+          String(a.anugerah || '').localeCompare(String(b.anugerah || ''), 'ms', { sensitivity: 'base' }) ||
+          a.kelas.localeCompare(b.kelas, 'ms', { sensitivity: 'base' }) ||
+          a.nama.localeCompare(b.nama, 'ms', { sensitivity: 'base' })
+      : (a, b) =>
+          a.kelas.localeCompare(b.kelas, 'ms', { sensitivity: 'base' }) ||
+          String(a.anugerah || '').localeCompare(String(b.anugerah || ''), 'ms', { sensitivity: 'base' }) ||
+          a.nama.localeCompare(b.nama, 'ms', { sensitivity: 'base' });
+
+  return rows.slice().sort(penyusun);
+}
+
+app.get('/api/mc', (req, res) => {
+  const hanya = String(req.query.hanya) !== '0';
+  const susun = req.query.susun === 'anugerah' ? 'anugerah' : 'kelas';
+  const rows = mcRows({
+    kelas: String(req.query.kelas || '').trim(),
+    q: String(req.query.q || '').trim(),
+    anugerah: String(req.query.anugerah || '').trim(),
+    hanya,
+    susun,
+  });
+
+  const kumpulan = [];
+  const petanya = new Map();
+  for (const s of rows) {
+    const kunci = susun === 'anugerah' ? String(s.anugerah || '— Tanpa anugerah —') : s.kelas;
+    if (!petanya.has(kunci)) {
+      petanya.set(kunci, []);
+      kumpulan.push({ tajuk: kunci, ahli: petanya.get(kunci) });
+    }
+    petanya.get(kunci).push({
+      kod: s.kod,
+      nama: s.nama,
+      kelas: s.kelas,
+      anugerah: s.anugerah || null,
+    });
+  }
+
+  let bil = 0;
+  for (const k of kumpulan) {
+    for (const a of k.ahli) {
+      bil += 1;
+      a.bil = bil;
+    }
+  }
+
+  res.json({
+    kumpulan,
+    jumlah: rows.length,
+    susun,
+    hanya,
+    senaraiAnugerah: store.senaraiAnugerah(),
+    ...store.stats(),
+  });
+});
+
+app.get('/api/mc.csv', (req, res) => {
+  const rows = mcRows({
+    kelas: String(req.query.kelas || '').trim(),
+    q: String(req.query.q || '').trim(),
+    anugerah: String(req.query.anugerah || '').trim(),
+    hanya: String(req.query.hanya) !== '0',
+    susun: req.query.susun === 'anugerah' ? 'anugerah' : 'kelas',
+  });
+  const lines = [['Bil', 'Kelas', 'Nama', 'Kod', 'Anugerah'].join(',')];
+  rows.forEach((s, i) => {
+    lines.push(
+      [i + 1, s.kelas, s.nama, s.kod, s.anugerah || '-'].map(csvEscape).join(',')
+    );
+  });
+  const body = '\uFEFF' + lines.join('\r\n') + '\r\n';
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="senarai-mc-anugerah.csv"');
+  res.send(body);
+});
+
+/* ------------------------------------------------------------------ */
 /*  Paparan (demo / kawalan)                                           */
 /* ------------------------------------------------------------------ */
 
@@ -1063,6 +1239,9 @@ app.post('/api/settings', (req, res) => {
   if (patch.logo_saiz !== undefined) {
     const allowed = ['sederhana', 'besar', 'penuh'];
     patch.logo_saiz = allowed.includes(String(patch.logo_saiz)) ? String(patch.logo_saiz) : 'penuh';
+  }
+  if (patch.papar_anugerah !== undefined) {
+    patch.papar_anugerah = String(patch.papar_anugerah) === '0' ? '0' : '1';
   }
   if (patch.sheets_url !== undefined) {
     const url = String(patch.sheets_url).trim();

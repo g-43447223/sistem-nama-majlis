@@ -94,6 +94,12 @@ function doPost(e) {
     return keluaran({ ok: true, dipadam });
   }
 
+  /* Perintah 'uji' hanya semak sambungan — TIDAK menulis apa-apa. */
+  if (data.perintah === 'uji') {
+    sheetsPersediaan_();
+    return keluaran({ ok: true, diterima: 0, dilangkau: 0, uji: true });
+  }
+
   const baris = Array.isArray(data.baris) ? data.baris : [];
   if (!baris.length) return keluaran({ ok: true, diterima: 0, dilangkau: 0 });
 

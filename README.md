@@ -57,15 +57,16 @@ tetingkap `mula.bat` / `pautan-online.bat`.
 
 ---
 
-## 2. Enam skrin dalam sistem
+## 2. Skrin-skrin dalam sistem
 
 | Skrin | Pautan | Kegunaan |
 |---|---|---|
-| **Utama** | `/` | Pintu masuk dan ringkasan majlis |
+| **Utama** | `/` | Pintu masuk, ringkasan majlis & QR pautan pengimbas |
 | **Paparan** | `/display.html` | Untuk laptop yang disambung ke projektor |
 | **Pengimbas** | `/scan.html` | Mengimbas kad **dengan** paparan nama di skrin |
 | **Kaunter daftar hadir** | `/scan.html?mod=daftar` | Mengimbas kad **tanpa** paparan — hanya rekod kehadiran |
-| **Admin** | `/admin.html` | Urus murid, gambar, kehadiran, tetapan, kad QR |
+| **Admin** | `/admin.html` | Urus murid (+ anugerah), kehadiran, tetapan, kad QR |
+| **Senarai MC** | `/admin.html#mc` | Nama & anugerah untuk pengacara majlis, boleh cetak/PDF |
 | **Cetak Kad QR** | `/qr.html` | Halaman cetak kad murid |
 
 Halaman pengimbas mempunyai suis mod di bahagian atas: **Paparan nama** dan
@@ -171,6 +172,59 @@ nama 96 aksara masih muat (8pt, 3 baris) dalam kad 60 mm.
 > kekal sah walaupun alamat IP laptop berubah.
 
 ---
+
+### 4.2 Anugerah murid
+
+Setiap murid boleh dipasangkan **satu anugerah utama** (medan pilihan `anugerah`).
+
+### Isi anugerah
+
+| Cara | Sesuai untuk |
+|---|---|
+| **Admin → Murid → Sunting → Anugerah** (ada autofill daripada nilai sedia ada) | beberapa orang / pembetulan |
+| **Import CSV** dengan lajur `anugerah` | satu pengisian penuh |
+| **Import CSV `kod,anugerah` + kotak “Kemas kini ikut kod”** | isi anugerah beramai-ramai **tanpa** mengusik nama/kelas/gambar |
+
+Contoh CSV kemas kini:
+
+```csv
+kod,anugerah
+SKPID6001,ANUGERAH PELAJAR CEMERLANG
+SKPID6002,ANUGERAH KEPEMIMPINAN
+```
+
+- Nilai disimpan **seperti yang ditaip** (semua huruf besar pun cantik pada plat emas).
+- Had **90 aksara**; baris baharu & ruang berganda dibersihkan automatik.
+- Sunting nama/kelas **tidak** memadam anugerah (kekal melainkan anda kosongkan medan itu).
+- `Admin → Murid` ada lajur **Anugerah**, penapis, dan **chip kiraan** termasuk
+  *Belum ada anugerah* — paling guna waktu rehearsal untuk cari nama yang tertinggal.
+  Klik chip → senarai ditapis serta-merta.
+
+### Pada skrin projektor
+
+Plat emas muncul **di bawah nama** (nama → garis → anugerah → kelas), dengan ikon pingat.
+
+- 3 tier saiz automatik: ≤28 aksara (penuh), 29–46 (`a-sederhana`), >46 (`a-panjang`),
+  dan teks sentiasa membalut kemas dalam lajur (tidak keluar dari plat).
+- Murid **tanpa** anugerah → paparan sama sepenuhnya seperti dulu (tiada ruang terbiar).
+- **Admin → Tetapan → “Papar anugerah pada skrin”** untuk matikan sementara ketika sesi
+  yang tiada penyampaian anugerah — data tidak dipadam, dan skrin yang sedang tayang
+  berubah serta-merta.
+
+### Senarai MC (pengacara majlis)
+
+**Admin → Senarai MC**: nama + anugerah disusun ikut kelas (atau ikut anugerah), dengan
+penapis kelas/anugerah, carian, dan suis *Hanya ada anugerah* (lalai ON).
+
+- `Cetak / Simpan PDF` → halaman A4 bersih, patah halaman ikut kelas.
+- `Muat turun CSV` → `/api/mc.csv` (Bil, Kelas, Nama, Kod, Anugerah).
+- Kiraan serta-merta ikut senarai anugerah, jadi “siapa belum dapat anugerah” mudah dilihat.
+
+### Eksport
+
+`attendance.csv` kini menyertakan lajur **Anugerah**:
+`Bil, Nama, Kelas, Kod, Anugerah, Status, Daftar hadir, Sumber daftar, Dipaparkan, Sumber papar`.
+Cermin Google Sheets tidak berubah (kekal lajur kehadiran) — anugerah boleh dibaca dari CSV.
 
 ## 5. Kamera telefon
 
@@ -370,6 +424,8 @@ sentiasa kelihatan (contohnya ketika uji cuba).
 | Logo program | Lambang di tengah skrin semasa menunggu imbasan (lihat 6.1) |
 | Saiz logo program | Sederhana / Besar / Penuhi ruang tengah — serta-merta |
 | Logo sekolah | Lambang kecil di penjuru atas kiri (lihat 6.2) |
+| Anugerah murid | Satu anugerah utama per murid; plat emas di bawah nama (lihat 4.2) |
+| Papar anugerah pada skrin | Hidup/matikan plat anugerah tanpa memadam data (lihat 4.2) |
 | Mod formal paparan | Sembunyi butang bunyi, “menunggu imbasan” & kiraan giliran (lihat 6.3) |
 | Cermin Google Sheets | Hantar kehadiran ke Sheet secara automatik (lihat 8.1) |
 
@@ -409,7 +465,7 @@ Kad QR yang sama digunakan untuk dua perkara berasingan:
   cermin) → imbas satu kad ujian untuk pastikan nama keluar semula → **Kosongkan Rekod** sekali
   lagi sebelum majlis benar-benar bermula.
 
-### 8.1 API reset (untuk kegunaan pantas)
+#### 8.1 API reset (untuk kegunaan pantas)
 
 | Tindakan | Cara |
 |---|---|
@@ -420,7 +476,7 @@ Kad QR yang sama digunakan untuk dua perkara berasingan:
 
 ---
 
-## 8.1 Cermin Google Sheets (pilihan)
+### 8.2 Cermin Google Sheets (pilihan)
 
 Kehadiran boleh dihantar **automatik** ke fail Google Sheet — sesuai jika pejabat
 perlukan rekod hidup, tetapi sistem tetap berjalan pada laptop (tiada internet
@@ -599,6 +655,18 @@ sistem nama majlis/
 - **`online.js` / `pautan-online.bat`:** melancarkan `server.js` pada port 80 dengan
   `AWAN=1` + `MAJLIS_KUNCI` (dijana rawak jika tidak diberi) dan membuka terowong
   `cloudflared` untuk mendapatkan pautan internet sementara.
+- **Anugerah:** lajur `students.anugerah` (NULL = tiada). Dinormalkan
+  (`normalisasiAnugerah`): satu baris, ruang tunggal, had 90 aksara. `PUT` tanpa medan
+  `anugerah` = nilai kekal; string kosong = sengaja dikosongkan. Dibawa dalam
+  `publicStudent()` jadi ia turut berada dalam peristiwa SSE `reveal`, suapan
+  `/api/papan`, senarai MC dan `attendance.csv`.
+- **Import dua mod:** tambah baharu (lalai) atau `mod: "kemas kini"` — yang kedua cukup
+  lajur `kod,anugerah` dan hanya menyentuh lajur yang wujud dalam CSV.
+- **Senarai MC:** `GET /api/mc` (berkumpulan, `susun=kelas|anugerah`, `hanya=0|1`) dan
+  `GET /api/mc.csv`; dicetak melalui `@media print` dalam `admin.css` (class `print-mc`
+  pada `<body>` semasa cetak supaya hanya tab MC yang keluar).
+- **`GET /api/sheets/uji` menggunakan GET (doGet)** supaya ujian sambungan tidak menulis
+  baris ke Google Sheet anda.
 
 ---
 
