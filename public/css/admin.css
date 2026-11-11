@@ -1024,6 +1024,23 @@ body.admin {
   }
 }
 
+.kawalan-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.kawalan-status b {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  color: var(--gold-2);
+  border: 1px solid rgba(216, 180, 95, 0.35);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
 /* Demo ------------------------------------------------------------- */
 
 .demo-list {

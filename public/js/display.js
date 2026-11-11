@@ -40,14 +40,23 @@
       mod_formal: '1',
       papar_kehadiran: '1',
       papar_anugerah: '1',
+      ganggu_serta_merta: '1',
+      papar_kekal: '0',
     },
     stats: { total: 0, hadir: 0 },
     anugerahSemasa: '',
     queue: [],
     showing: false,
     timer: null,
+    timerGanti: null,
+    mulaTayang: 0,
+    gantiTangguh: null,
     audioReady: false,
   };
+
+  /* Pelindung supaya skrin tidak berkelip bila pengimbas menghantar
+     dua kod dalam masa yang sangat dekat. */
+  const TAHAN_MIN = 900;
 
   /* ---------------------------------------------------------------- */
   /*  Jam                                                              */
@@ -151,6 +160,20 @@
 
   window.addEventListener('pointermove', wakeControls, { passive: true });
   window.addEventListener('keydown', wakeControls);
+
+  /* Kekunci pintasan pada komputer projektor: Esc atau Space = kembali ke logo. */
+  window.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' && event.code !== 'Space' && event.key !== ' ') return;
+    const target = event.target;
+    const adaFokusInteraktif =
+      target &&
+      target !== document.body &&
+      typeof target.closest === 'function' &&
+      target.closest('button, a, input, select, textarea, video');
+    if (adaFokusInteraktif) return;
+    event.preventDefault();
+    kembaliLogo();
+  });
 
   /* Logo majlis dipaparkan di tengah skrin semasa menunggu imbasan. */
   const LOGO_SIZES = ['sederhana', 'besar', 'penuh'];
@@ -263,7 +286,14 @@
 
     const seconds = Math.max(2, Math.min(30, Number(state.settings.tempoh_paparan) || 6));
     clearTimeout(state.timer);
-    state.timer = setTimeout(hide, seconds * 1000);
+    state.mulaiTayang = Date.now();
+
+    /* Mod Kekal: nama tidak hilang sendiri — menunggu imbasan seterusnya. */
+    if (String(state.settings.papar_kekal) === '1') {
+      state.timer = null;
+    } else {
+      state.timer = setTimeout(hide, seconds * 1000);
+    }
 
     // Jika gambar lambat/fail, pastikan paparan tidak tersangkut.
     clearTimeout(state.timerGuard);
@@ -283,8 +313,36 @@
     }, 480);
   }
 
+  /* Kembali ke paparan logo: kosongkan gilir & nama yang menunggu ganti. */
+  function kembaliLogo() {
+    state.queue = [];
+    state.gantiTangguh = null;
+    clearTimeout(state.timer);
+    clearTimeout(state.timerGanti);
+    updateQueueBadge();
+
+    if (state.showing || stage.classList.contains('showing')) {
+      hide();
+    } else {
+      stage.classList.remove('showing');
+      reveal.classList.remove('is-in');
+      demoBadge.classList.add('hidden');
+      state.showing = false;
+    }
+  }
+
   function drain() {
     if (state.showing) return;
+
+    if (state.gantiTangguh) {
+      const t = state.gantiTangguh;
+      state.gantiTangguh = null;
+      clearTimeout(state.timerGanti);
+      state.showing = true;
+      showStudent(t);
+      return;
+    }
+
     if (!state.queue.length) {
       updateQueueBadge();
       return;
@@ -297,6 +355,39 @@
 
   function enqueue(data) {
     if (!data || !data.student) return;
+
+    /* Suis "Tukar serta-merta": nama baharu menggantikan nama sedia ada. */
+    if (String(state.settings.ganggu_serta_merta) !== '0') {
+      if (!state.showing) {
+        state.showing = true;
+        updateQueueBadge();
+        showStudent(data);
+        return;
+      }
+
+      const sejak = Date.now() - state.mulaiTayang;
+      if (sejak < TAHAN_MIN) {
+        /* Baru muncul: simpan yang terakhir, ganti sebaik pelindung tamat. */
+        state.gantiTangguh = data;
+        clearTimeout(state.timerGanti);
+        state.timerGanti = setTimeout(() => {
+          const t = state.gantiTangguh;
+          state.gantiTangguh = null;
+          if (t) showStudent(t);
+        }, TAHAN_MIN - sejak);
+        return;
+      }
+
+      clearTimeout(state.timer);
+      clearTimeout(state.timerGanti);
+      state.gantiTangguh = null;
+      state.queue = [];
+      updateQueueBadge();
+      showStudent(data);
+      return;
+    }
+
+    /* Kelakuan asal: beratur ikut tempoh paparan. */
     if (state.queue.length > 40) state.queue.splice(0, state.queue.length - 40);
     state.queue.push(data);
     updateQueueBadge();
@@ -431,9 +522,16 @@
         applySettings(data.settings || {});
       }
       applyStats(data);
-      for (const reveal of data.reveal || []) {
-        if (reveal.at > papanSejak) papanSejak = reveal.at;
-        enqueue(reveal);
+      const senarai = data.reveal || [];
+      if (String(state.settings.ganggu_serta_merta) !== '0') {
+        /* Mod ganti serta-merta: yang lama sudah lapuk, ambil yang terakhir. */
+        for (const r of senarai) if (r.at > papanSejak) papanSejak = r.at;
+        if (senarai.length) enqueue(senarai[senarai.length - 1]);
+      } else {
+        for (const reveal of senarai) {
+          if (reveal.at > papanSejak) papanSejak = reveal.at;
+          enqueue(reveal);
+        }
       }
     } catch {
       /* pelayan belum sedia — cuba lagi pada giliran berikutnya */
@@ -486,9 +584,17 @@
     dengar('reset', (data) => {
       applyStats(data);
       state.queue = [];
+      state.gantiTangguh = null;
+      clearTimeout(state.timerGanti);
       papanSejak = Date.now();
       updateQueueBadge();
       if (state.showing) hide();
+    });
+
+    /* Butang "Papar Logo Majlis" dari Admin. */
+    dengar('bersihkan', () => {
+      papanSejak = Date.now();
+      kembaliLogo();
     });
 
     dengar('students', (data) => applyStats(data));

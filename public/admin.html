@@ -436,6 +436,34 @@
 
                 <div class="switch-row">
                   <div class="switch-copy">
+                    <b>Tukar serta-merta</b>
+                    <small>
+                      Imbasan baharu terus menggantikan nama yang sedang dipaparkan, tanpa
+                      menunggu tempoh paparan selesai.
+                    </small>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setGanggu" name="ganggu_serta_merta" />
+                    <span></span>
+                  </label>
+                </div>
+
+                <div class="switch-row">
+                  <div class="switch-copy">
+                    <b>Kekal sampai imbasan seterusnya</b>
+                    <small>
+                      Nama murid tidak hilang sendiri. Sesuai untuk majlis, kerana masa di pentas
+                      berbeza-beza. <b>Tempoh paparan diabaikan</b> apabila mod ini hidup.
+                    </small>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="setKekal" name="papar_kekal" />
+                    <span></span>
+                  </label>
+                </div>
+
+                <div class="switch-row">
+                  <div class="switch-copy">
                     <b>Papar anugerah pada skrin</b>
                     <small>
                       Tunjukkan plat anugerah di bawah nama murid. Matikan sementara untuk sesi yang
@@ -582,7 +610,26 @@
               <p>Papar nama murid pada skrin tanpa mengira kehadiran. Sesuai untuk ujian sebelum majlis.</p>
             </div>
             <div class="page-actions">
+              <button class="btn" type="button" id="btnPaparLogo" title="Skrin projektor kembali ke logo majlis">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 12l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>
+                Papar Logo Majlis
+              </button>
               <button class="btn btn-gold" type="button" id="btnRandomDemo">Papar Murid Rawak</button>
+            </div>
+          </div>
+
+          <div class="panel panel-pad" style="margin-bottom: 18px">
+            <div class="panel-title">Kawalan skrin paparan</div>
+            <p class="muted" style="font-size: 0.84rem; line-height: 1.7">
+              <b>Papar Logo Majlis</b> mengembalikan skrin projektor ke logo dengan serta-merta —
+              guna selepas seorang murid selesai, terutamanya bila mod
+              <b>Kekal sampai imbasan seterusnya</b> hidup. Kekunci <b>Esc</b> atau <b>Space</b>
+              pada komputer projektor juga memberi kesan yang sama.
+            </p>
+            <div class="kawalan-status">
+              <span class="muted" style="font-size:.8rem">Suis aktif:</span>
+              <b id="statusGanggu">—</b><span class="muted" style="font-size:.76rem">(tukar serta-merta)</span>
+              <b id="statusKekal">—</b><span class="muted" style="font-size:.76rem">(kekal sampai imbasan seterusnya)</span>
             </div>
           </div>
 

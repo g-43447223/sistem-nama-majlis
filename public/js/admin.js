@@ -836,6 +836,9 @@
     $('#setKehadiran').checked = settings.papar_kehadiran === '1';
     $('#setFormal').checked = settings.mod_formal !== '0';
     $('#setAnugerah').checked = settings.papar_anugerah !== '0';
+    $('#setGanggu').checked = settings.ganggu_serta_merta !== '0';
+    $('#setKekal').checked = settings.papar_kekal === '1';
+    paparStatusKawalan();
     $('#setSheetsUrl').value = settings.sheets_url || '';
     $('#setSheetsKunci').value = settings.sheets_kunci || '';
     $('#setSheetsAuto').checked = settings.sheets_auto !== '0';
@@ -902,6 +905,8 @@
       bunyi: $('#setBunyi').checked ? '1' : '0',
       mod_formal: $('#setFormal').checked ? '1' : '0',
       papar_anugerah: $('#setAnugerah').checked ? '1' : '0',
+      ganggu_serta_merta: $('#setGanggu').checked ? '1' : '0',
+      papar_kekal: $('#setKekal').checked ? '1' : '0',
       papar_kehadiran: $('#setKehadiran').checked ? '1' : '0',
     };
 
@@ -1007,6 +1012,57 @@
       state.settings = result.settings;
       applyCrestPreview('');
       toast('Penjuru atas kiri kembali ke emblem lalai.', 'ok');
+    } catch (err) {
+      toast(err.message, 'bad');
+    }
+  });
+
+  /* Dua suis kawalan paparan dihantar serta-merta supaya boleh ditukar
+     di tengah majlis tanpa tekan "Simpan Tetapan". */
+  function paparStatusKawalan() {
+    const g = $('#statusGanggu');
+    const k = $('#statusKekal');
+    if (g) g.textContent = $('#setGanggu')?.checked ? 'HIDUP' : 'MATI';
+    if (k) k.textContent = $('#setKekal')?.checked ? 'HIDUP' : 'MATI';
+  }
+
+  async function tetapkanKawalanPaparan(kunci, nilai, mesej) {
+    try {
+      const result = await api('/api/settings', { method: 'POST', body: { [kunci]: nilai } });
+      state.settings = result.settings;
+      paparStatusKawalan();
+      toast(mesej, 'ok');
+    } catch (err) {
+      toast(err.message, 'bad');
+    }
+  }
+
+  $('#setGanggu').addEventListener('change', (event) => {
+    const nilai = event.target.checked ? '1' : '0';
+    tetapkanKawalanPaparan(
+      'ganggu_serta_merta',
+      nilai,
+      event.target.checked
+        ? 'Hidup — imbasan baharu terus menggantikan nama di skrin.'
+        : 'Mati — nama akan beratur ikut tempoh paparan.'
+    );
+  });
+
+  $('#setKekal').addEventListener('change', (event) => {
+    const nilai = event.target.checked ? '1' : '0';
+    tetapkanKawalanPaparan(
+      'papar_kekal',
+      nilai,
+      event.target.checked
+        ? 'Hidup — nama kekal di skrin sampai imbasan seterusnya.'
+        : 'Mati — nama hilang sendiri mengikut tempoh paparan.'
+    );
+  });
+
+  $('#btnPaparLogo').addEventListener('click', async () => {
+    try {
+      const hasil = await api('/api/display/logo', { method: 'POST', body: {} });
+      toast(`Sken projektor kembali ke logo (${hasil.clients} skrin bersambung).`, 'ok');
     } catch (err) {
       toast(err.message, 'bad');
     }

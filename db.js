@@ -98,6 +98,8 @@ const DEFAULT_SETTINGS = {
   mod_formal: '1',
   papar_kehadiran: '1',
   papar_anugerah: '1',
+  ganggu_serta_merta: '1',
+  papar_kekal: '0',
   sheets_url: '',
   sheets_auto: '1',
   sheets_kunci: '',

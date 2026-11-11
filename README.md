@@ -408,6 +408,37 @@ sentiasa kelihatan (contohnya ketika uji cuba).
 > Nota: pelayar hanya membenarkan audio selepas ada tindakan pengguna (klik/kekunci).
 > Ini kekangan pelayar, bukan sistem ini.
 
+### 6.4 Dua suis Kawalan Paparan (tempo masa nama)
+
+Di **Admin → Tetapan** ada dua suis. Keduanya boleh ditukar **semasa majlis sedang
+berjalan** — perubahan sampai serta-merta ke semua skrin, tanpa perlu tekan
+*Simpan Tetapan* atau muat semula.
+
+**1. Tukar serta-merta** (hidup secara lalai)
+
+- Imbasan baharu **terus menggantikan** nama yang sedang dipaparkan.
+- Kalau dimatikan, kelakuan lama digunakan: nama beratur dan keluar ikut tempoh paparan.
+- Ada pelindung selama 0.9 saat supaya skrin tidak berkelip bila mesin pengimbas
+  menghantar dua kod serentak. Dalam tempoh itu, hanya nama **terakhir** yang akan keluar.
+
+**2. Kekal sampai imbasan seterusnya** (mati secara lalai)
+
+- Nama murid **tidak hilang sendiri**. Ia kekal di skrin selama murid itu berada di pentas,
+  dan bertukar sendiri sebaik kad murid seterusnya diimbas.
+- Apabila suis ini hidup, nilai **Tempoh paparan diabaikan**.
+- Untuk kembali ke logo program: tekan butang **Papar Logo Majlis** di
+  **Admin → Mod Demo**, atau tekan **Esc** / **Space** pada komputer projektor.
+
+Cara saya syorkan untuk hari majlis:
+
+| Segmen | Suis yang hidup |
+|---|---|
+| Penyampaian anugerah satu per satu | Tukar serta-merta ✓ · Kekal ✓ |
+| Paparan beramai-ramai (contoh: senarai nama kelas ditayang berturut-turut) | Tukar serta-merta ✗ · Kekal ✗ (pakai tempoh 5–10 saat) |
+
+Skrin yang dibuka melalui pautan internet (mod terowong) juga menerima pertukaran yang
+sama, walaupun ia menggunakan kaedah bertanya-berkala sebagai jalan sokongan.
+
 ---
 
 ## 7. Tetapan lain
@@ -426,6 +457,8 @@ sentiasa kelihatan (contohnya ketika uji cuba).
 | Logo sekolah | Lambang kecil di penjuru atas kiri (lihat 6.2) |
 | Anugerah murid | Satu anugerah utama per murid; plat emas di bawah nama (lihat 4.2) |
 | Papar anugerah pada skrin | Hidup/matikan plat anugerah tanpa memadam data (lihat 4.2) |
+| Tukar serta-merta | Imbasan baharu terus menggantikan nama yang sedang tersenarai (lihat 6.4) |
+| Kekal sampai imbasan seterusnya | Nama tidak hilang sendiri; tempoh paparan diabaikan (lihat 6.4) |
 | Mod formal paparan | Sembunyi butang bunyi, “menunggu imbasan” & kiraan giliran (lihat 6.3) |
 | Cermin Google Sheets | Hantar kehadiran ke Sheet secara automatik (lihat 8.1) |
 
@@ -471,7 +504,8 @@ Kad QR yang sama digunakan untuk dua perkara berasingan:
 |---|---|
 | Kosongkan semua rekod | Admin → Kehadiran → **Kosongkan Rekod** (`DELETE /api/attendance`) |
 | Reset seorang murid | butang reset pada baris murid (`DELETE /api/attendance/:id`) |
-| Kosongkan Sheet | Admin → Kehadiran → **Kosongkan Google Sheets** (`POST /api/sheets/kosongkan`) |
+| Skrin kembali ke logo | Admin → Mod Demo → **Papar Logo Majlis** (`POST /api/display/logo`) atau Esc / Space pada komputer projektor |
+| Kosongkan Google Sheets | Admin → Kehadiran → **Kosongkan Google Sheets** (`POST /api/sheets/kosongkan`) |
 | Semak sebelum reset | penapis *Sudah dipaparkan* / *Daftar kaunter sahaja* di jadual Kehadiran |
 
 ---

@@ -1222,6 +1222,12 @@ app.post('/api/display/ping', (req, res) => {
   res.json({ ok: true, clients: sseClients.size });
 });
 
+/* Butang "Papar Logo Majlis": skrin paparan kembali ke logo dengan serta-merta. */
+app.post('/api/display/logo', (req, res) => {
+  sendEvent('bersihkan', { at: Date.now(), ...store.stats() });
+  res.json({ ok: true, clients: sseClients.size });
+});
+
 /* ------------------------------------------------------------------ */
 /*  Tetapan                                                            */
 /* ------------------------------------------------------------------ */
@@ -1242,6 +1248,12 @@ app.post('/api/settings', (req, res) => {
   }
   if (patch.papar_anugerah !== undefined) {
     patch.papar_anugerah = String(patch.papar_anugerah) === '0' ? '0' : '1';
+  }
+  if (patch.ganggu_serta_merta !== undefined) {
+    patch.ganggu_serta_merta = String(patch.ganggu_serta_merta) === '0' ? '0' : '1';
+  }
+  if (patch.papar_kekal !== undefined) {
+    patch.papar_kekal = String(patch.papar_kekal) === '1' ? '1' : '0';
   }
   if (patch.sheets_url !== undefined) {
     const url = String(patch.sheets_url).trim();
