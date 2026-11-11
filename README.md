@@ -122,7 +122,30 @@ Muat turun templat CSV melalui butang **Muat turun templat**.
 
 **Satu murid:** klik ikon kamera pada baris murid.
 
-**Pukal:** namakan setiap fail gambar dengan **kod murid**, contoh:
+**Import dari folder (paling mudah untuk senarai besar).** Salin folder gambar ke dalam
+folder sistem ini, kemudian buka **Admin → Murid → Folder gambar**:
+
+1. Taip nama folder, contoh `GAMBAR & NAMA IBNU SINA`.
+2. Kelas dikesan sendiri daripada nama folder (boleh pilih manual jika perlu).
+3. Tekan **Semak sahaja** — laporan menunjukkan setiap fail dipadankan dengan murid siapa,
+   mana yang namanya hampir dieja, dan murid mana yang belum dapat gambar.
+4. Tekan **Import gambar** untuk menyalin masuk. Gambar disimpan dalam `public/uploads/`
+   dengan nama kod murid (contoh `SKPIPRA002.jpg`).
+
+Nama fail boleh ikut pola:
+
+```
+IS 1 - MUHAMMAD TASHRIQ.jpg
+IK - 1 MUHAMMAD FARIZ BIN KHAIRUL.jpg
+IQ 1-MUHAMMAD AFEEF HAZIQ BIN NASRI.jpg
+```
+
+Sistem memadankan **perkataan nama dalam nama fail** dengan nama murid dalam kelas yang
+sama. Ejaan sedikit berbeza (contoh `MUHAMAD` vs `MUHAMMAD`) masih dipadankan tetapi
+disenaraikan sebagai "ejaan hampir" supaya anda boleh semak. Fail yang tidak padan tidak
+mengusik apa-apa.
+
+**Pukal ikut kod (cara lama):** namakan setiap fail gambar dengan **kod murid**, contoh:
 
 ```
 NM26-0001.jpg

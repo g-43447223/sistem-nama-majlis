@@ -549,6 +549,204 @@ app.post('/api/photos/bulk', upload.array('foto', 300), (req, res) => {
 });
 
 /* ------------------------------------------------------------------ */
+/*  Import gambar dari folder di komputer pelayan                      */
+/*  Nama fail ikut pola "IS 1 - MUHAMMAD TASHRIQ.jpg" — dipadankan     */
+/*  dengan nama murid dalam kelas yang sama. Kering=true = semak sahaja */
+/* ------------------------------------------------------------------ */
+
+const ROOT_DIR = path.resolve(__dirname);
+const bawahSaiz = (p) => (process.platform === 'win32' ? String(p).toLowerCase() : String(p));
+
+function normalNamaTeks(raw) {
+  return String(raw ?? '')
+    .toUpperCase()
+    .replace(/['`.\-,:;()]+/g, ' ')
+    .replace(/[^A-Z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function kataNama(raw) {
+  return normalNamaTeks(raw).split(' ').filter((w) => w && !/^(BIN|BINTI|BT)$/.test(w));
+}
+
+function huraianNamaFail(base) {
+  const m = String(base).match(/^([A-Za-z]{1,4})[ ._-]*(\d{1,3})[ ._-]*(.+)$/);
+  if (m) return { no: Number(m[2]), nama: m[3].trim() };
+  return { no: 0, nama: String(base).trim() };
+}
+
+function jarak(a, b) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > 3) return 9;
+  let pra = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const kini = [i];
+    for (let j = 1; j <= b.length; j++) {
+      kini[j] = Math.min(pra[j] + 1, kini[j - 1] + 1, pra[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    pra = kini;
+  }
+  return pra[b.length];
+}
+
+/* Semua perkataan nama fail mesti ada dalam nama murid — sama ada
+   tepat atau hampir (tolak ejaan rosak seperti MUHAMAD vs MUHAMMAD). */
+function ujiPadanan(kataFail, kataMurid) {
+  const set = new Set(kataMurid);
+  let tepat = 0;
+  let hampir = 0;
+  for (const w of kataFail) {
+    if (set.has(w)) {
+      tepat += 1;
+      continue;
+    }
+    let terbaik = null;
+    for (const s of kataMurid) {
+      if (w.length < 4 || s.length < 4) continue;
+      const had = Math.max(1, Math.min(2, Math.floor(Math.max(w.length, s.length) / 4)));
+      const d = jarak(w, s);
+      if (d <= had && (terbaik === null || d < terbaik)) terbaik = d;
+    }
+    if (terbaik === null) return null;
+    hampir += 1;
+  }
+  return { kira: tepat + hampir, tepat, hampir };
+}
+
+app.post('/api/photos/folder', (req, res) => {
+  const folderInp = String(req.body.folder ?? '').trim();
+  const kering = req.body.kering !== false; // lalai: semak sahaja
+
+  if (!folderInp) return res.status(400).json({ error: 'Nama atau path folder diperlukan.' });
+
+  const target = path.resolve(ROOT_DIR, folderInp);
+  if (bawahSaiz(target) !== bawahSaiz(ROOT_DIR) && !bawahSaiz(target).startsWith(bawahSaiz(ROOT_DIR) + path.sep)) {
+    return res
+      .status(400)
+      .json({ error: 'Folder mesti berada di dalam folder sistem ini. Salin folder gambar ke situ dulu.' });
+  }
+
+  let entries;
+  try {
+    entries = fs.readdirSync(target, { withFileTypes: true });
+  } catch {
+    return res.status(400).json({ error: `Folder tidak ditemui: ${folderInp}` });
+  }
+  const gambar = entries.filter((e) => e.isFile() && ALLOWED_EXT.has(path.extname(e.name).toLowerCase()));
+  if (!gambar.length) return res.status(400).json({ error: 'Tiada fail gambar (JPG/PNG/WEBP/GIF) dalam folder itu.' });
+  if (gambar.length > 1000) return res.status(400).json({ error: 'Melebihi 1000 gambar — pecahkan kepada beberapa kelas.' });
+
+  /* Kelas: pilih sendiri, atau kesan daripada nama folder. */
+  const kelasSemua = store.db.prepare('SELECT DISTINCT kelas FROM students ORDER BY kelas').all().map((r) => r.kelas);
+  let kelas = String(req.body.kelas ?? '').trim();
+  if (kelas) {
+    if (!kelasSemua.includes(kelas)) return res.status(400).json({ error: `Kelas "${kelas}" tiada dalam sistem.` });
+  } else {
+    const folderNorm = normalNamaTeks(path.basename(target));
+    const calon = kelasSemua.filter((k) => {
+      const kn = normalNamaTeks(k);
+      if (folderNorm.includes(kn)) return true;
+      const hujung = kn.split(' ').slice(-2).join(' ');
+      return hujung.length >= 6 && folderNorm.includes(hujung);
+    });
+    if (calon.length !== 1) {
+      return res.status(400).json({
+        error: calon.length
+          ? `Nama folder sepadan dengan beberapa kelas (${calon.join(', ')}). Pilih kelas sendiri.`
+          : 'Tidak dapat kesan kelas daripada nama folder. Pilih kelas sendiri.',
+      });
+    }
+    kelas = calon[0];
+  }
+
+  const murid = store.db.prepare('SELECT * FROM students WHERE kelas = ?').all(kelas);
+  const kataMurid = murid.map((s) => ({ s, kata: kataNama(s.nama) }));
+
+  const dipadang = [];
+  const gagal = [];
+  const diambil = new Map();
+
+  for (const e of gambar) {
+    const base = path.basename(e.name, path.extname(e.name));
+    const { nama: namaTeks } = huraianNamaFail(base);
+    const kataFail = kataNama(namaTeks);
+    if (!kataFail.length) {
+      gagal.push({ fail: e.name, sebab: 'tiada nama dalam nama fail' });
+      continue;
+    }
+
+    const calon = [];
+    for (const m of kataMurid) {
+      const mk = ujiPadanan(kataFail, m.kata);
+      if (mk) calon.push({ ...m, kira: mk.kira, hamper: mk.hampir > 0 });
+    }
+    if (!calon.length) {
+      gagal.push({ fail: e.name, sebab: 'nama tidak sepadan dengan mana-mana murid', teks: namaTeks });
+      continue;
+    }
+    /* Padanan tepat didahulukan daripada padanan ejaan hampir;
+       kiraan kata lebih tinggi menang; sama-sama tepat — nama paling
+       pendek (paling sedikit lebihan) menang. */
+    calon.sort((a, b) => Number(a.hamper) - Number(b.hamper) || b.kira - a.kira || a.kata.length - b.kata.length);
+    if (
+      calon.length > 1 &&
+      Number(calon[0].hamper) === Number(calon[1].hamper) &&
+      calon[0].kira === calon[1].kira &&
+      calon[0].kata.length === calon[1].kata.length
+    ) {
+      gagal.push({
+        fail: e.name,
+        sebab: 'nama samar — lebih seorang murid sepadan',
+        calon: calon.slice(0, 3).map((c) => c.s.nama),
+      });
+      continue;
+    }
+
+    const pilih = calon[0];
+    if (diambil.has(pilih.s.id)) {
+      const terdahulu = diambil.get(pilih.s.id);
+      if (!terdahulu.dua) terdahulu.dua = [terdahulu.fail];
+      terdahulu.dua.push(e.name);
+      terdahulu.sebab = 'gambar lain sudah memakai murid ini';
+      gagal.push({ fail: e.name, sebab: 'murid sama dengan gambar lain' });
+      continue;
+    }
+    diambil.set(pilih.s.id, { fail: e.name });
+
+    const ext = path.extname(e.name).toLowerCase();
+    const namaSimpan = `${String(pilih.s.kod).replace(/[^A-Za-z0-9._-]/g, '')}${ext}`;
+    const dest = path.join(UPLOAD_DIR, namaSimpan);
+    const rekod = { fail: e.name, kod: pilih.s.kod, nama: pilih.s.nama, hampir: pilih.hamper };
+
+    if (!kering) {
+      fs.copyFileSync(path.join(target, e.name), dest);
+      const web = `/uploads/${namaSimpan}`;
+      const lama = pilih.s.foto;
+      store.db.prepare('UPDATE students SET foto = ? WHERE id = ?').run(web, pilih.s.id);
+      if (lama && lama !== web) removeUpload(lama);
+    }
+    dipadang.push(rekod);
+  }
+
+  const idDipadang = new Set(dipadang.map((d) => d.kod));
+  const tanpaGambar = murid.filter((s) => !idDipadang.has(s.kod)).map((s) => s.nama);
+
+  if (!kering && dipadang.length) sendEvent('students', { reason: 'photos-folder', ...store.stats() });
+
+  res.json({
+    ok: true,
+    kering,
+    kelas,
+    folder: path.basename(target),
+    jumlahFail: gambar.length,
+    dipadang,
+    gagal,
+    tanpaGambar,
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /*  Import CSV                                                         */
 /* ------------------------------------------------------------------ */
 

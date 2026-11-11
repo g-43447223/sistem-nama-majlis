@@ -441,6 +441,86 @@
     }
   });
 
+  /* Import gambar dari folder pelayan --------------------------------- */
+
+  $('#btnFolderToggle').addEventListener('click', () => {
+    const panel = $('#folderPanel');
+    panel.classList.toggle('hidden');
+    if (panel.classList.contains('hidden')) return;
+    const sel = $('#folderKelas');
+    if (sel.options.length <= 1) {
+      $('#filterKelas')
+        .querySelectorAll('option')
+        .forEach((o) => {
+          if (!o.value) return;
+          const opt = document.createElement('option');
+          opt.value = o.value;
+          opt.textContent = o.value;
+          sel.appendChild(opt);
+        });
+    }
+  });
+
+  function paparLaporanFolder(r) {
+    const box = $('#folderLaporan');
+    box.classList.remove('hidden');
+    const hampir = r.dipadang.filter((d) => d.hampir);
+    const senarai = (tajuk, items) =>
+      items.length
+        ? `<div class="folder-bahagian"><h5>${tajuk}</h5><ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`
+        : '';
+
+    box.innerHTML = [
+      `<div class="folder-ringkas"><b>${esc(r.kelas)}</b> · ${r.dipadang.length}/${r.jumlahFail} gambar ` +
+        (r.kering ? 'sepadan (belum disalin)' : 'berjaya disalin') +
+        (hampir.length ? ` · ${hampir.length} ejaan hampir` : '') +
+        (r.gagal.length ? ` · ${r.gagal.length} gagal` : '') +
+        (r.tanpaGambar.length ? ` · ${r.tanpaGambar.length} murid belum dapat gambar` : '') +
+        '</div>',
+      senarai(
+        'Padanan ejaan hampir — sila semak',
+        hampir.map((d) => `${d.fail} → ${d.nama}`)
+      ),
+      senarai(
+        'Tidak sepadan',
+        r.gagal.map((g) => `${g.fail} — ${g.sebab}${g.calon ? ` (calon: ${g.calon.join(' / ')})` : ''}`)
+      ),
+      senarai('Murid belum dapat gambar', r.tanpaGambar),
+    ].join('');
+  }
+
+  async function kirimFolder(kering) {
+    const folder = $('#folderPath').value.trim();
+    if (!folder) {
+      toast('Taip nama folder lebih dulu.', 'bad');
+      return;
+    }
+    $('#folderStatus').textContent = kering ? 'Menyemak…' : 'Mengimport…';
+    try {
+      const r = await api('/api/photos/folder', {
+        method: 'POST',
+        body: { folder, kelas: $('#folderKelas').value, kering },
+      });
+      paparLaporanFolder(r);
+      if (kering) {
+        toast(
+          `${r.dipadang.length} gambar sepadan dengan murid ${r.kelas}. Tekan "Import gambar" untuk salin.`,
+          r.gagal.length ? 'warn' : 'ok'
+        );
+      } else {
+        toast(`${r.dipadang.length} gambar sudah masuk ke sistem.`, r.gagal.length ? 'warn' : 'ok');
+        await loadStudents();
+      }
+    } catch (err) {
+      toast(err.message, 'bad');
+    } finally {
+      $('#folderStatus').textContent = '';
+    }
+  }
+
+  $('#btnFolderSemak').addEventListener('click', () => kirimFolder(true));
+  $('#btnFolderImport').addEventListener('click', () => kirimFolder(false));
+
   /* ================================================================ */
   /*  Import CSV                                                       */
   /* ================================================================ */

@@ -92,6 +92,7 @@
               <option value="tiada">Belum ada anugerah</option>
             </select>
             <button class="btn" type="button" id="btnImport">Import CSV</button>
+            <button class="btn" type="button" id="btnFolderToggle" title="Import gambar dari folder dalam komputer pelayan">Folder gambar</button>
             <label class="btn file-label">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3" /></svg>
               Gambar pukal
@@ -129,6 +130,27 @@
               Gambar pukal: nama fail gambar mesti sama dengan kod murid, contoh
               <code>NM26-0001.jpg</code>.
             </p>
+          </div>
+
+          <div class="import-panel hidden" id="folderPanel">
+            <h4>Import gambar dari folder (ikut nama murid)</h4>
+            <p>
+              Salin folder gambar ke dalam folder sistem ini, kemudian taip namanya di bawah.
+              Sistem memadankan <b>nama dalam nama fail</b> dengan murid dalam kelas yang sama —
+              contoh <code>IS 1 - MUHAMMAD TASHRIQ.jpg</code> untuk kelas Ibnu Sina.
+              Tekan <b>Semak sahaja</b> lebih dulu; gambar hanya disalin selepas tekan
+              <b>Import gambar</b>.
+            </p>
+            <div class="import-actions" style="flex-wrap: wrap">
+              <input id="folderPath" class="input" type="text" placeholder="Nama folder, contoh: GAMBAR & NAMA IBNU SINA" style="flex: 1; min-width: 240px" />
+              <select id="folderKelas" class="select" aria-label="Kelas folder">
+                <option value="">Kelas automatik (ikut nama folder)</option>
+              </select>
+              <button class="btn btn-sm" type="button" id="btnFolderSemak">Semak sahaja</button>
+              <button class="btn btn-sm btn-gold" type="button" id="btnFolderImport">Import gambar</button>
+              <span class="muted" id="folderStatus" style="font-size: 0.8rem"></span>
+            </div>
+            <div id="folderLaporan" class="folder-laporan hidden"></div>
           </div>
 
           <div class="anugerah-ringkasan" id="anugerahRingkasan"></div>
