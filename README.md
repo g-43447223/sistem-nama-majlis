@@ -153,6 +153,11 @@ mengusik apa-apa.
 - **Had 75%.** Kalau nama pada fail panjang (4 patah kata ke atas), hanya 75% daripada
   patah kata itu perlu wujud dalam nama murid untuk dianggap orang yang sama. Contoh
   `NUR ALINA IZRAH FAUZI` tetap padan dengan `NUR ALINA IZARA BINTI FAUZI`.
+- **Kesamaan keseluruhan nama (laluan kedua).** Selain kira per perkataan, sistem juga
+  mengukur persamaan nama penuh (Jaro-Winkler ≥ 0.9). Ini selamatkan dua situasi yang
+  gagal ikut perkataan sahaja: nama **bercantum** (`NURAISYAH` vs `NUR AISYAH`) dan
+  **nama bapa bez eja** (`... bt HAFIZ` vs `... BINTI HAMZAH`) — selagi nama unik murid
+  itu cukup kuat.
 - **Nama pendek (1–2 patah kata) mesti padan semua** — untuk mengelak tersalah orang.
 - Padanan penuh & tepat sentiasa mengatasi padanan separa. Kalau dua murid sama skor,
   fail itu dianggap **samar** dan DITOLONG (dilaporkan untuk anda pilih sendiri) —

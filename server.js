@@ -675,8 +675,55 @@ function jarak(a, b) {
   return pra[b.length];
 }
 
+/* Jaro (0..1) — ketahanan keseluruhan aksara, bukan sepotong-sepotong. */
+function jaro(a, b) {
+  if (a === b) return 1;
+  const la = a.length;
+  const lb = b.length;
+  if (!la || !lb) return 0;
+  const had = Math.max(Math.floor(Math.max(la, lb) / 2) - 1, 0);
+  const tA = new Array(la).fill(false);
+  const tB = new Array(lb).fill(false);
+  let m = 0;
+  for (let i = 0; i < la; i++) {
+    const dari = Math.max(0, i - had);
+    const sampai = Math.min(lb - 1, i + had);
+    for (let j = dari; j <= sampai; j++) {
+      if (!tB[j] && a[i] === b[j]) {
+        tA[i] = true;
+        tB[j] = true;
+        m += 1;
+        break;
+      }
+    }
+  }
+  if (!m) return 0;
+  let k = 0;
+  let tr = 0;
+  for (let i = 0; i < la; i++) {
+    if (!tA[i]) continue;
+    while (!tB[k]) k += 1;
+    if (a[i] !== b[k]) tr += 1;
+    k += 1;
+  }
+  tr = Math.floor(tr / 2);
+  return (m / la + m / lb + (m - tr) / m) / 3;
+}
+
+/* Jaro-Winkler: beri ganjaran awalan sepunya (nama depan selalunya sama). */
+function winkler(a, b) {
+  const base = jaro(a, b);
+  if (base < 0.7) return base;
+  const maxPrefix = Math.min(4, Math.min(a.length, b.length));
+  let p = 0;
+  while (p < maxPrefix && a[p] === b[p]) p += 1;
+  return base + p * 0.1 * (1 - base);
+}
+
 /* Gred ikut perkataan fail: setiap perkataan boleh padan tepat atau ejaan
-   hampir (tolak rosak seperti MUHAMAD vs MUHAMMAD). Lulus ikut had 75%. */
+   hampir (tolak rosak seperti MUHAMAD vs MUHAMMAD). Lulus ikut had 75%,
+   ATAU nama keseluruhan sangat serupa (≥0.9 Jaro-Winkler) — ini menyelamatkan
+   kes nama bercantum (NURAISYAH vs NUR AISYAH) dan bapa bez eja (HAFIZ/HAMZAH). */
 function ujiPadanan(kataFail, kataMurid) {
   const baki = kataMurid.slice();
   let tepat = 0;
@@ -707,8 +754,18 @@ function ujiPadanan(kataFail, kataMurid) {
     }
   }
   const liput = tepat + hampir;
-  if (!liputanCukup(kataFail, liput)) return null;
-  return { kira: liput, tepat, hampir };
+  const cov = kataFail.length ? liput / kataFail.length : 0;
+
+  let jw = 0;
+  if (kataFail.length >= 3 && kataMurid.length >= 2) {
+    jw = winkler(kataFail.join(''), kataMurid.join(''));
+  }
+
+  const lulusKata = liputanCukup(kataFail, liput);
+  const lulusUtuh = jw >= 0.9;
+  if (!lulusKata && !lulusUtuh) return null;
+  const skor = Math.max(cov, lulusUtuh ? jw : 0);
+  return { kira: liput, tepat, hampir, skor, separaUtuh: lulusUtuh && !lulusKata };
 }
 
 app.post('/api/photos/folder', async (req, res) => {
@@ -744,8 +801,15 @@ app.post('/api/photos/folder', async (req, res) => {
     const calon = kelasSemua.filter((k) => {
       const kn = normalNamaTeks(k);
       if (folderNorm.includes(kn)) return true;
-      const hujung = kn.split(' ').slice(-2).join(' ');
-      return hujung.length >= 6 && folderNorm.includes(hujung);
+      const h2 = kn.split(' ').slice(-2);
+      if (h2.length === 2) {
+        if (h2.join(' ').length >= 6 && folderNorm.includes(h2.join(' '))) return true;
+        /* Kelas "D6 AMANAH" turut dicuba sebagai "6 AMANAH" (folder guru
+           biasanya tidak menulis huruf awalan). */
+        const tanpaHuruf = h2[0].replace(/^[A-Z]+(?=\d)/, '') + ' ' + h2[1];
+        if (tanpaHuruf !== h2.join(' ') && folderNorm.includes(tanpaHuruf)) return true;
+      }
+      return false;
     });
     if (calon.length !== 1) {
       return res.status(400).json({
@@ -776,27 +840,29 @@ app.post('/api/photos/folder', async (req, res) => {
     const calon = [];
     for (const m of kataMurid) {
       const mk = ujiPadanan(kataFail, m.kata);
-      if (mk) calon.push({ ...m, kira: mk.kira, tepat: mk.tepat, hamper: mk.hampir > 0, sebahagian: mk.kira < kataFail.length });
+      if (mk) {
+        calon.push({
+          ...m,
+          kira: mk.kira,
+          tepat: mk.tepat,
+          skor: mk.skor,
+          hamper: mk.hampir > 0 || mk.separaUtuh,
+          sebahagian: mk.kira < kataFail.length || mk.separaUtuh,
+        });
+      }
     }
     if (!calon.length) {
       gagal.push({ fail: e.name, sebab: 'nama kurang daripada 75% padan dengan mana-mana murid', teks: namaTeks });
       continue;
     }
-    /* Susun: liputan paling tinggi dahulu, kemudian yang paling banyak
-       padanan tepat, kemudian nama paling pendek (paling sedikit lebihan). */
-    calon.sort(
-      (a, b) =>
-        b.kira - a.kira ||
-        b.tepat - a.tepat ||
-        Number(a.hamper) - Number(b.hamper) ||
-        a.kata.length - b.kata.length
-    );
+    /* Susun: skor padanan paling tinggi dahulu, kemudian padanan tepat
+       paling banyak, kemudian nama paling pendek (paling sedikit lebihan). */
+    calon.sort((a, b) => b.skor - a.skor || b.tepat - a.tepat || a.kata.length - b.kata.length);
     if (
       calon.length > 1 &&
-      calon[0].kira === calon[1].kira &&
-      calon[0].tepat === calon[1].tepat &&
-      Number(calon[0].hamper) === Number(calon[1].hamper) &&
-      calon[0].kata.length === calon[1].kata.length
+      Math.abs(calon[1].skor - calon[0].skor) < 0.02 &&
+      calon[1].tepat === calon[0].tepat &&
+      calon[1].kata.length === calon[0].kata.length
     ) {
       gagal.push({
         fail: e.name,
