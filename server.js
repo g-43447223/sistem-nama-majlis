@@ -87,6 +87,60 @@ function removeUpload(webPath) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Kecilkan gambar murid: sisi panjang ≤1000px, JPEG kualiti 85.      */
+/*  Logo, crest & background TIDAK diusik — kualiti poster perlu utuh. */
+/* ------------------------------------------------------------------ */
+
+const FOTO_PANJANG = 1000;
+const FOTO_KUALITI = 85;
+const ambilSharp = (() => {
+  let penyimpan;
+  return () => {
+    if (penyimpan === undefined) {
+      try {
+        penyimpan = require('sharp');
+      } catch {
+        penyimpan = null;
+      }
+    }
+    return penyimpan;
+  };
+})();
+
+/* Semua gambar murid dikekalkan sebagai JPEG (gambar tiada ketelusan). */
+async function kecilkanGambar(laluanFull) {
+  const sharp = ambilSharp();
+  if (!sharp) return { ok: false, sebab: 'sharp tiada' };
+
+  const meta = await sharp(laluanFull, { failOn: 'none' }).metadata();
+  const panjang = Math.max(meta.width || 0, meta.height || 0);
+  const saiz = fs.statSync(laluanFull).size;
+
+  /* Sudah kecil — jangan turun kualiti dua kali. */
+  if (panjang <= FOTO_PANJANG && saiz <= 350 * 1024) {
+    return { ok: true, sudahKecil: true, saiz };
+  }
+
+  const pen = sharp(laluanFull, { failOn: 'none' })
+    .rotate()
+    .resize({ width: FOTO_PANJANG, height: FOTO_PANJANG, fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: FOTO_KUALITI, mozjpeg: true });
+
+  const baru = laluanFull.replace(/\.([a-z0-9]+)$/i, '') + '.jpg';
+  const sementara = baru + '.tmp';
+  await pen.toFile(sementara, { force: true });
+  fs.renameSync(sementara, baru);
+
+  if (baru !== laluanFull) {
+    fs.rmSync(laluanFull, { force: true });
+  }
+  return { ok: true, saiz: fs.statSync(baru).size, failBaru: path.basename(baru) };
+}
+
+/* Tukar laluan web /uploads/x kepada fail sebenar. */
+const webKeFull = (web) => path.join(UPLOAD_DIR, path.basename(String(web)));
+
+/* ------------------------------------------------------------------ */
 /*  Server-Sent Events                                                 */
 /* ------------------------------------------------------------------ */
 
@@ -505,7 +559,7 @@ app.delete('/api/students/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/api/students/:id/photo', upload.single('foto'), (req, res) => {
+app.post('/api/students/:id/photo', upload.single('foto'), async (req, res) => {
   const student = store.getStudentById(req.params.id);
   if (!student) {
     if (req.file) removeUpload(`/uploads/${req.file.filename}`);
@@ -514,9 +568,16 @@ app.post('/api/students/:id/photo', upload.single('foto'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Tiada gambar dimuat naik.' });
 
   const old = student.foto;
-  const webPath = `/uploads/${req.file.filename}`;
+  let namaFail = req.file.filename;
+  try {
+    const kempa = await kecilkanGambar(webKeFull(`/uploads/${namaFail}`));
+    if (kempa.ok && kempa.failBaru) namaFail = kempa.failBaru;
+  } catch {
+    /* gagal kempa — gambar asal terus dipakai */
+  }
+  const webPath = `/uploads/${namaFail}`;
   store.db.prepare('UPDATE students SET foto = ? WHERE id = ?').run(webPath, student.id);
-  removeUpload(old);
+  if (old && old !== webPath) removeUpload(old);
   res.json({ student: publicStudent(store.getStudentById(student.id)) });
 });
 
@@ -524,13 +585,26 @@ app.post('/api/students/:id/photo', upload.single('foto'), (req, res) => {
 /*  Muat naik gambar pukal (nama fail = kod murid)                     */
 /* ------------------------------------------------------------------ */
 
-app.post('/api/photos/bulk', upload.array('foto', 300), (req, res) => {
+app.post('/api/photos/bulk', upload.array('foto', 300), async (req, res) => {
   const files = req.files || [];
   const matched = [];
   const unmatched = [];
 
   for (const file of files) {
-    const webPath = `/uploads/${file.filename}`;
+    let namaFail = file.filename;
+    let webPath = `/uploads/${file.filename}`;
+
+    /* Kempa dulu; kalau tukar jadi .jpg, ikut nama baru. */
+    try {
+      const kempa = await kecilkanGambar(webKeFull(webPath));
+      if (kempa.ok && kempa.failBaru) {
+        namaFail = kempa.failBaru;
+        webPath = `/uploads/${namaFail}`;
+      }
+    } catch {
+      /* gambar asal terus dipakai */
+    }
+
     const base = path.basename(file.originalname, path.extname(file.originalname));
     const key = normalizeKod(base);
     const student = store.getStudentByKod(key);
@@ -539,7 +613,7 @@ app.post('/api/photos/bulk', upload.array('foto', 300), (req, res) => {
       unmatched.push(file.originalname);
       continue;
     }
-    removeUpload(student.foto);
+    if (student.foto && student.foto !== webPath) removeUpload(student.foto);
     store.db.prepare('UPDATE students SET foto = ? WHERE id = ?').run(webPath, student.id);
     matched.push({ kod: student.kod, nama: student.nama, fail: file.originalname });
   }
@@ -614,7 +688,7 @@ function ujiPadanan(kataFail, kataMurid) {
   return { kira: tepat + hampir, tepat, hampir };
 }
 
-app.post('/api/photos/folder', (req, res) => {
+app.post('/api/photos/folder', async (req, res) => {
   const folderInp = String(req.body.folder ?? '').trim();
   const kering = req.body.kering !== false; // lalai: semak sahaja
 
@@ -715,12 +789,23 @@ app.post('/api/photos/folder', (req, res) => {
     diambil.set(pilih.s.id, { fail: e.name });
 
     const ext = path.extname(e.name).toLowerCase();
-    const namaSimpan = `${String(pilih.s.kod).replace(/[^A-Za-z0-9._-]/g, '')}${ext}`;
-    const dest = path.join(UPLOAD_DIR, namaSimpan);
+    const kodBersih = String(pilih.s.kod).replace(/[^A-Za-z0-9._-]/g, '');
+    let namaSimpan = `${kodBersih}${ext}`;
+    let dest = path.join(UPLOAD_DIR, namaSimpan);
     const rekod = { fail: e.name, kod: pilih.s.kod, nama: pilih.s.nama, hampir: pilih.hamper };
 
     if (!kering) {
       fs.copyFileSync(path.join(target, e.name), dest);
+      /* Kempa ke JPEG ≤1000px; kalau tukar nama, ikut nama baru. */
+      try {
+        const kempa = await kecilkanGambar(dest);
+        if (kempa.ok && kempa.failBaru) {
+          namaSimpan = kempa.failBaru;
+          dest = path.join(UPLOAD_DIR, namaSimpan);
+        }
+      } catch {
+        /* gambar asal terus dipakai */
+      }
       const web = `/uploads/${namaSimpan}`;
       const lama = pilih.s.foto;
       store.db.prepare('UPDATE students SET foto = ? WHERE id = ?').run(web, pilih.s.id);

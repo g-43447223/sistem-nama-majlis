@@ -158,6 +158,20 @@ dengan kod murid akan diabaikan.
 
 Jika tiada gambar, sistem akan menjana avatar berinisial secara automatik.
 
+**Saiz gambar.** Gambar murid dikecilkan sendiri kepada sisi panjang ≤1000 px, JPEG
+kualiti 85 apabila anda import/muat naik — menjimatkan ruang & memaparkan gambar lebih
+laju pada skrin projektor. Logo, crest & background **tidak** diusik. Kalau anda
+kumpul banyak gambar besar dari telefon (bermegah satu), boleh kempakan sekali jalan:
+
+```
+node tools/kempa-gambar.js --semak    lihat anggaran jimat (tiada perubahan)
+node tools/kempa-gambar.js            kempa semua gambar murid sedia ada
+```
+
+Muat naik gambar melalui pelayar (butang *Gambar pukal* / satu gambar) hadnya **10 MB
+satu fail**; gambar lebih besar akan ditolak. Import dari folder tiada had saiz tetapi
+tetap dikempakan.
+
 ---
 
 ## 4. Cetak kad QR
