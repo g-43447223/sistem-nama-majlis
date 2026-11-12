@@ -641,7 +641,18 @@ function normalNamaTeks(raw) {
 }
 
 function kataNama(raw) {
-  return normalNamaTeks(raw).split(' ').filter((w) => w && !/^(BIN|BINTI|BT)$/.test(w));
+  /* Buang kata penunjuk nama keluarga: BIN, BINTI, BT, dan juga singkatan
+     sepatah B (contoh "AHMAD B ISKANDAR" = "AHMAD BIN ISKANDAR"). */
+  return normalNamaTeks(raw).split(' ').filter((w) => w && !/^(BIN|BINTI|BINT|BT|BN|B)$/i.test(w));
+}
+
+/* Gred 75%: sekurang-kurangnya 3 daripada 4 (75%) perkataan pada NAMA FAIL
+   kena ada dalam nama murid (tepat atau ejaan hampir). Nama pendek 1-2 perkataan
+   mesti kena semua supaya tidak tersalah orang. */
+const HAD_LIPUTAN = 0.75;
+function liputanCukup(kataFail, liput) {
+  if (kataFail.length <= 2) return liput === kataFail.length; // 1-2 patah: kena semua
+  return liput >= Math.ceil(kataFail.length * HAD_LIPUTAN); // ≥75%
 }
 
 function huraianNamaFail(base) {
@@ -664,28 +675,40 @@ function jarak(a, b) {
   return pra[b.length];
 }
 
-/* Semua perkataan nama fail mesti ada dalam nama murid — sama ada
-   tepat atau hampir (tolak ejaan rosak seperti MUHAMAD vs MUHAMMAD). */
+/* Gred ikut perkataan fail: setiap perkataan boleh padan tepat atau ejaan
+   hampir (tolak rosak seperti MUHAMAD vs MUHAMMAD). Lulus ikut had 75%. */
 function ujiPadanan(kataFail, kataMurid) {
-  const set = new Set(kataMurid);
+  const baki = kataMurid.slice();
   let tepat = 0;
   let hampir = 0;
   for (const w of kataFail) {
-    if (set.has(w)) {
+    const i = baki.indexOf(w);
+    if (i >= 0) {
       tepat += 1;
+      baki.splice(i, 1);
       continue;
     }
-    let terbaik = null;
-    for (const s of kataMurid) {
-      if (w.length < 4 || s.length < 4) continue;
+    if (w.length < 4) continue;
+    let terbaik = -1;
+    let beza = 9;
+    for (let j = 0; j < baki.length; j++) {
+      const s = baki[j];
+      if (s.length < 4) continue;
       const had = Math.max(1, Math.min(2, Math.floor(Math.max(w.length, s.length) / 4)));
       const d = jarak(w, s);
-      if (d <= had && (terbaik === null || d < terbaik)) terbaik = d;
+      if (d <= had && d < beza) {
+        beza = d;
+        terbaik = j;
+      }
     }
-    if (terbaik === null) return null;
-    hampir += 1;
+    if (terbaik >= 0) {
+      hampir += 1;
+      baki.splice(terbaik, 1);
+    }
   }
-  return { kira: tepat + hampir, tepat, hampir };
+  const liput = tepat + hampir;
+  if (!liputanCukup(kataFail, liput)) return null;
+  return { kira: liput, tepat, hampir };
 }
 
 app.post('/api/photos/folder', async (req, res) => {
@@ -753,20 +776,26 @@ app.post('/api/photos/folder', async (req, res) => {
     const calon = [];
     for (const m of kataMurid) {
       const mk = ujiPadanan(kataFail, m.kata);
-      if (mk) calon.push({ ...m, kira: mk.kira, hamper: mk.hampir > 0 });
+      if (mk) calon.push({ ...m, kira: mk.kira, tepat: mk.tepat, hamper: mk.hampir > 0, sebahagian: mk.kira < kataFail.length });
     }
     if (!calon.length) {
-      gagal.push({ fail: e.name, sebab: 'nama tidak sepadan dengan mana-mana murid', teks: namaTeks });
+      gagal.push({ fail: e.name, sebab: 'nama kurang daripada 75% padan dengan mana-mana murid', teks: namaTeks });
       continue;
     }
-    /* Padanan tepat didahulukan daripada padanan ejaan hampir;
-       kiraan kata lebih tinggi menang; sama-sama tepat — nama paling
-       pendek (paling sedikit lebihan) menang. */
-    calon.sort((a, b) => Number(a.hamper) - Number(b.hamper) || b.kira - a.kira || a.kata.length - b.kata.length);
+    /* Susun: liputan paling tinggi dahulu, kemudian yang paling banyak
+       padanan tepat, kemudian nama paling pendek (paling sedikit lebihan). */
+    calon.sort(
+      (a, b) =>
+        b.kira - a.kira ||
+        b.tepat - a.tepat ||
+        Number(a.hamper) - Number(b.hamper) ||
+        a.kata.length - b.kata.length
+    );
     if (
       calon.length > 1 &&
-      Number(calon[0].hamper) === Number(calon[1].hamper) &&
       calon[0].kira === calon[1].kira &&
+      calon[0].tepat === calon[1].tepat &&
+      Number(calon[0].hamper) === Number(calon[1].hamper) &&
       calon[0].kata.length === calon[1].kata.length
     ) {
       gagal.push({
@@ -792,7 +821,7 @@ app.post('/api/photos/folder', async (req, res) => {
     const kodBersih = String(pilih.s.kod).replace(/[^A-Za-z0-9._-]/g, '');
     let namaSimpan = `${kodBersih}${ext}`;
     let dest = path.join(UPLOAD_DIR, namaSimpan);
-    const rekod = { fail: e.name, kod: pilih.s.kod, nama: pilih.s.nama, hampir: pilih.hamper };
+    const rekod = { fail: e.name, kod: pilih.s.kod, nama: pilih.s.nama, hampir: pilih.hamper, sebahagian: pilih.sebahagian };
 
     if (!kering) {
       fs.copyFileSync(path.join(target, e.name), dest);

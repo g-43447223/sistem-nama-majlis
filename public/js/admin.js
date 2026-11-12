@@ -464,7 +464,7 @@
   function paparLaporanFolder(r) {
     const box = $('#folderLaporan');
     box.classList.remove('hidden');
-    const hampir = r.dipadang.filter((d) => d.hampir);
+    const perluSemak = r.dipadang.filter((d) => d.hampir || d.sebahagian);
     const senarai = (tajuk, items) =>
       items.length
         ? `<div class="folder-bahagian"><h5>${tajuk}</h5><ul>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>`
@@ -473,13 +473,13 @@
     box.innerHTML = [
       `<div class="folder-ringkas"><b>${esc(r.kelas)}</b> · ${r.dipadang.length}/${r.jumlahFail} gambar ` +
         (r.kering ? 'sepadan (belum disalin)' : 'berjaya disalin') +
-        (hampir.length ? ` · ${hampir.length} ejaan hampir` : '') +
+        (perluSemak.length ? ` · ${perluSemak.length} perlu semak` : '') +
         (r.gagal.length ? ` · ${r.gagal.length} gagal` : '') +
         (r.tanpaGambar.length ? ` · ${r.tanpaGambar.length} murid belum dapat gambar` : '') +
         '</div>',
       senarai(
-        'Padanan ejaan hampir — sila semak',
-        hampir.map((d) => `${d.fail} → ${d.nama}`)
+        'Perlu semak (ejaan hampir / nama separa ≥75%) — sila sahkan',
+        perluSemak.map((d) => `${d.fail} → ${d.nama}`)
       ),
       senarai(
         'Tidak sepadan',

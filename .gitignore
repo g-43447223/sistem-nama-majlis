@@ -13,11 +13,9 @@ data/
 public/uploads/
 
 # Folder gambar murid dari guru (rahsia — muka & nama murid, JANGAN naik ke GitHub)
-GAMBAR & NAMA IBNU SINA/
-GAMBAR & NAMA IBNU WAFID 2027/
-GAMBAR& NAMA IBNU KHALDUN/
-PRASEKOLAH IBNU QAYYIM/
-6 HARMONI JUBAH/
+GAMBAR*/
+*JUBAH/
+PRASEKOLAH*/
 
 # Sijil & kunci HTTPS
 *.pem

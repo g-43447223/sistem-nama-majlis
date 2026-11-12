@@ -145,6 +145,21 @@ sama. Ejaan sedikit berbeza (contoh `MUHAMAD` vs `MUHAMMAD`) masih dipadankan te
 disenaraikan sebagai "ejaan hampir" supaya anda boleh semak. Fail yang tidak padan tidak
 mengusik apa-apa.
 
+**Peraturan padanan nama:**
+
+- **`B` = `BIN`/`BINTI`.** Kata penunjuk ini (BIN, BINTI, BINT, BT, BN atau singkatan
+  sepatah `B`) dibuang daripada kedua-dua belah nama sebelum dibandingkan. Jadi
+  `AHMAD B ISKANDAR`, `AHMAD BIN ISKANDAR` dan `AHMAD ISKANDAR` dianggap sama.
+- **Had 75%.** Kalau nama pada fail panjang (4 patah kata ke atas), hanya 75% daripada
+  patah kata itu perlu wujud dalam nama murid untuk dianggap orang yang sama. Contoh
+  `NUR ALINA IZRAH FAUZI` tetap padan dengan `NUR ALINA IZARA BINTI FAUZI`.
+- **Nama pendek (1–2 patah kata) mesti padan semua** — untuk mengelak tersalah orang.
+- Padanan penuh & tepat sentiasa mengatasi padanan separa. Kalau dua murid sama skor,
+  fail itu dianggap **samar** dan DITOLONG (dilaporkan untuk anda pilih sendiri) —
+  sistem tidak menebak buta-buta.
+- Apa-apa padanan yang bukan 100% (ejaan hampir / separa) disenaraikan di bawah
+  **Perlu semak** supaya anda sahkan sebelum/susulan import.
+
 **Pukal ikut kod (cara lama):** namakan setiap fail gambar dengan **kod murid**, contoh:
 
 ```
