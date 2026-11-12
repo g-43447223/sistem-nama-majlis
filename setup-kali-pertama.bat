@@ -49,13 +49,27 @@ powercfg /change hibernate-timeout-ac 0 >nul 2>nul
 powercfg /change monitor-timeout-ac 10  >nul 2>nul
 echo [ok] Skrin boleh padam, tetapi PC akan kekal berjaga.
 
-REM --- 5. Papar IP PC ini ------------------------------------------------
+REM --- 5. Alat terowong internet (cloudflared) --------------------------
+echo [..] Menyediakan alat pautan internet (cloudflared)...
+if exist cloudflared.exe (
+  echo [ok] cloudflared.exe sudah ada - muat turun dilangkau.
+) else (
+  where cloudflared >nul 2>nul
+  if errorlevel 1 (
+    curl -L -o cloudflared.exe https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe
+    if exist cloudflared.exe (echo [ok] cloudflared dimuat turun.) else (echo [!] Gagal muat turun - boleh cuba lagi kemudian.)
+  ) else (
+    echo [ok] cloudflared sudah dipasang dalam sistem.
+  )
+)
+
+REM --- 6. Papar IP PC ini ------------------------------------------------
 echo.
 echo === Alamat IP PC ini sekarang ===
 ipconfig | findstr /i "IPv4"
 echo.
 echo Pada hari majlis, buka pautan ini di perangkat lain (ganti IP):
-echo     http://IP-PC-INI/scan.html       untuk pengimbas daftar & papar
+echo     http://IP-PC-INI/scan.html       untuk pengimbas daftar dan papar
 echo     http://IP-PC-INI/display.html    untuk skrin projektor
 echo     http://IP-PC-INI/admin.html      untuk admin (kunci jika ada)
 echo.

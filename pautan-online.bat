@@ -7,6 +7,9 @@ if not exist node_modules\express (
   call npm install
 )
 
+REM Use the local cloudflared.exe if setup downloaded it.
+if exist cloudflared.exe set CLOUDFLARED=%~dp0cloudflared.exe
+
 echo.
 echo  Memberikan pautan internet untuk semua perangkat...
 echo  Perlu: internet + cloudflared.

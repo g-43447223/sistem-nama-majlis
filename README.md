@@ -901,3 +901,38 @@ anda, simpan. Selepas itu setiap perangkat buka `scan.html?kunci=<kunci>` sekali
 Kamera perlu HTTPS. Semasa pelayan LAN naik, ia auto-jana sijil sendiri — telefon
 hanya perlu *accept* amaran sijil sekali. Kalau guna pautan internet (`npm run online`
 dari PC pelayan baru ini), HTTPS asli disediakan terowong dan tiada amaran sijil.
+
+### 14.1 Perangkat guna internet sendiri (4G / Wi-Fi rumah / mana-mana)
+
+Kalau anda mahu pelayan tetap PC khas itu, tetapi **perangkat lain tidak berada di
+Wi-Fi sekolah yang sama** (guna data telefon masing-masing), hidupkan mod online pada
+PC pelayan:
+
+1. Di PC pelayan, tekan 2x **`pautan-online.bat`** (sebagai ganti `server-jalan.bat`).
+   Tetingkap akan memaparkan pautan internet bentuk
+   `https://xxxx-xxxx.trycloudflare.com`.
+2. Buka fail **`pautan-online.txt`** — di dalamnya ada pautan siap untuk setiap
+   keperluan (projektor, pengimbas, kaunter, admin) dan **kunci majlis sudah
+   dilekatkan** di hujungnya. Hantar pautan itu ke setiap perangkat (WhatsApp pun boleh).
+3. Setiap perangkat buka pautan tersebut dengan internet mereka sendiri — tidak perlu
+   berada di jaringan sekolah langsung.
+
+Yang perlu anda tahu:
+
+- **Internet pada PC pelayan ialah nyawa sistem ini.** PC pelayan putus internet =
+  semua perangkat terputus. Kalau line sekolah ragu-ragu, pancutkan PC pelayan dengan
+  kabel LAN, bukan Wi-Fi.
+- **Pautan bertukar setiap kali `pautan-online.bat` dimulakan semula.** Mulakan sekali
+  sahaja pada hari majlis, jangan tutup tetingkap itu, dan kongsikan pautan selepas ia
+  naik. Kalau terpaksa mula semula, hantar pautan baru kepada semua.
+- **Kelajuan:** nama sampai ke skrin dalam ±1–3 saat melalui terowong ini
+  (di dalam Wi-Fi sekolah sendiri ±0.05 saat).
+- **Kedua-dua laluan boleh hidup serentak:** perangkat yang berada di Wi-Fi sekolah
+  boleh terus guna `http://IP-PC/` macam biasa; yang di luar guna pautan internet.
+  Semua masuk ke database yang sama.
+- **Kelebihan tambahan:** kamera telefon terus jalan (HTTPS asli, tiada amaran sijil).
+- Perlu internet + cloudflared. `setup-kali-pertama.bat` sudah muat turun cloudflared
+  untuk anda; kalau tak sempat, ia boleh dimuat turun dari
+  https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+- Mahu pautan yang **kekal selamanya** (tak bertukar)? Naik ke hosting (seksyen 13).
+  Perlu ingat: perlu import semula murid & gambar ke sana.
