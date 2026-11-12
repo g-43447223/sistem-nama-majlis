@@ -835,3 +835,69 @@ gh repo create sistem-nama-majlis --public --source=. --remote=origin --push
 
 `data/`, `public/uploads/`, `node_modules/` dan `*.pem` sentiasa dikecualikan oleh
 `.gitignore` — gambar murid, pangkalan data dan kunci HTTPS tidak akan naik ke GitHub.
+
+---
+
+## 14. Pindah ke PC khas sebagai pelayan
+
+Anda boleh serahkan **satu komputer meja/laptop khusus** untuk menjadi pelayan
+majlis — ia cuma jadi pelayan, anda tak perlu usik lagi. Pautan LAN berubah mengikut
+IP PC baru ini.
+
+### Benda yang PERLU dipindah ke PC baru (paling penting!)
+
+Semua maklumat sebenar majlis anda **tidak ada dalam GitHub** (ia dikecualikan demi
+privasi murid). Jadi jangan guna `git clone` sahaja — itu cuma kode kosong tanpa data.
+Salin 3 benda ini dari PC lama ke PC baru (guna pen drive / kongsi folder):
+
+```
+data/majlis.db            ← senarai 473 murid, anugerah, kehadiran
+public/uploads/           ← gambar murid (220+), logo, crest, background
+kunci.txt                 ← kunci majlis (jika dipakai)
+```
+
+### Langkah di PC baru (sekali sahaja)
+
+1. Pasang **Node.js** versi LTS: https://nodejs.org (Windows 64-bit).
+2. Salin **keseluruhan folder sistem** dari PC lama (termasuk `data/` dan
+   `public/uploads/`) ke PC baru, contoh ke `C:\sistem-nama-majlis`.
+   Atau `git clone` kode dulu, kemudian tampal `data/` + `public/uploads/` ke dalamnya.
+3. Tekan kanan **`setup-kali-pertama.bat`** → *Run as administrator*. Ia akan:
+   pasang pakej (`sharp`, `express`), buka port 80/443 dalam firewall, dan halang PC
+   daripada tidur. Skrin akan dipapar IP PC baru.
+4. Tekan 2x **`server-jalan.bat`** — pelayan naik. Itu sahaja rutin harian.
+
+### Nak pelayan naik sendiri bila PC dihidupkan?
+
+Tekan **Win+R** → taip `shell:startup` → Enter → letak *shortcut* `server-jalan.bat`
+ke dalam folder Startup itu. PC nyala → pelayan terus siap, anda tak sentuh apa-apa.
+
+### Sambung perangkat ke PC baru
+
+Semua perangkat (projektor, pengimbas, telefon) buka pautan dengan **IP PC baru**:
+
+```
+http://<IP-PC-BARU>/display.html            skrin projektor
+http://<IP-PC-BARU>/scan.html               kaunter daftar hadir
+http://<IP-PC-BARU>/scan.html?mod=papar     papar nama semasa majlis
+http://<IP-PC-BARU/                          halaman awal (ada QR telefon)
+```
+
+Ganti `<IP-PC-BARU>` dengan nombor yang skrin `setup` tunjuk (contoh `192.168.0.55`).
+
+**Petua: tetapkan IP pelayan.** Minta kakitangan ICT sekolah *reserve* satu IP tetap
+untuk PC itu (DHCP reservation) supaya alamatnya tidak berubah-ubah setiap kali PC
+nyala. Kalau IP berubah, semua pautan perlu dikemas kini.
+
+### Kalau nak guna kunci juga
+
+Mod biasa = **tanpa kunci** (senang, pengimbas & projektor terus jalan). Kalau PC ini
+akan terus terdedah ke internet dan anda mahu Admin dikunci, buka `server-jalan.bat`
+dalam Notepad, buang `REM ` pada baris `REM set MAJLIS_KUNCI=...`, ganti dengan kunci
+anda, simpan. Selepas itu setiap perangkat buka `scan.html?kunci=<kunci>` sekali sahaja.
+
+### Nota kamera telefon
+
+Kamera perlu HTTPS. Semasa pelayan LAN naik, ia auto-jana sijil sendiri — telefon
+hanya perlu *accept* amaran sijil sekali. Kalau guna pautan internet (`npm run online`
+dari PC pelayan baru ini), HTTPS asli disediakan terowong dan tiada amaran sijil.
