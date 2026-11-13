@@ -225,9 +225,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.9vw;
-  margin-top: 0.7vh;
-  font-size: clamp(0.6rem, 1.05vh, 0.9rem);
-  letter-spacing: 0.3em;
+  margin-top: 0.9vh;
+  font-size: clamp(0.8rem, 1.4vh, 1.2rem);
+  letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--gold);
 }
@@ -381,12 +381,12 @@ body {
 }
 
 .idle .idle-eyebrow {
-  font-size: clamp(0.75rem, 1.5vh, 1.3rem);
-  letter-spacing: 0.32em;
+  font-size: clamp(1rem, 2vh, 1.8rem);
+  letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--gold);
   margin-top: 0;
-  margin-bottom: 2.4vh;
+  margin-bottom: 2.8vh;
 }
 
 .idle p {
@@ -492,12 +492,12 @@ body {
   display: flex;
   align-items: center;
   gap: 1.4vw;
-  font-size: clamp(0.78rem, 1.5vh, 1.35rem);
-  letter-spacing: 0.36em;
+  font-size: clamp(1rem, 2vh, 1.8rem);
+  letter-spacing: 0.32em;
   text-transform: uppercase;
   color: var(--gold);
   margin-bottom: 1.8vh;
-  padding-left: 0.36em;
+  padding-left: 0.32em;
 }
 
 .reveal-eyebrow::before {
@@ -510,7 +510,7 @@ body {
 .name {
   font-family: var(--serif);
   font-weight: 400;
-  font-size: clamp(2.15rem, 7.2vh, 6rem);
+  font-size: clamp(2.6rem, 9vh, 7.5rem);
   line-height: 1.04;
   letter-spacing: -0.005em;
   max-width: 100%;
@@ -521,11 +521,11 @@ body {
 
 /* Nama panjang: kecilkan bersusun supaya sentiasa muat & kemas */
 .name.nama-panjang {
-  font-size: clamp(1.75rem, 5.6vh, 4.6rem);
+  font-size: clamp(2.2rem, 7vh, 5.8rem);
 }
 
 .name.nama-sangat-panjang {
-  font-size: clamp(1.45rem, 4.5vh, 3.7rem);
+  font-size: clamp(1.8rem, 5.6vh, 4.8rem);
   line-height: 1.08;
 }
 
@@ -554,8 +554,8 @@ body {
   gap: clamp(10px, 1.4vw, 22px);
   max-width: 100%;
   min-width: 0;
-  margin-bottom: 2vh;
-  padding: 1.5vh 2vw;
+  margin-bottom: 2.2vh;
+  padding: 1.8vh 2.4vw;
   border: 1px solid rgba(216, 180, 95, 0.45);
   border-radius: 6px;
   background: linear-gradient(180deg, rgba(216, 180, 95, 0.16), rgba(216, 180, 95, 0.05));
@@ -564,8 +564,8 @@ body {
 
 .anugerah-ikon {
   flex: 0 0 auto;
-  width: clamp(34px, 6vh, 68px);
-  height: clamp(34px, 6vh, 68px);
+  width: clamp(40px, 7vh, 80px);
+  height: clamp(40px, 7vh, 80px);
   color: var(--gold-2);
   filter: drop-shadow(0 0 12px rgba(216, 180, 95, 0.35));
 }
@@ -574,9 +574,9 @@ body {
   flex: 1 1 auto;
   min-width: 0;
   font-family: var(--serif);
-  font-size: clamp(1.3rem, 3.9vh, 2.8rem);
-  line-height: 1.18;
-  letter-spacing: 0.09em;
+  font-size: clamp(1.5rem, 4.8vh, 3.3rem);
+  line-height: 1.14;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: #f5e6bd;
   text-wrap: balance;
@@ -586,14 +586,14 @@ body {
 
 /* Tajuk anugerah sederhana & panjang: kecilkan supaya plat kekal kemas */
 .anugerah.a-sederhana .anugerah-teks {
-  font-size: clamp(1.12rem, 3.2vh, 2.3rem);
-  letter-spacing: 0.075em;
+  font-size: clamp(1.3rem, 4vh, 2.8rem);
+  letter-spacing: 0.06em;
 }
 
 .anugerah.a-panjang .anugerah-teks {
-  font-size: clamp(0.98rem, 2.6vh, 1.9rem);
-  letter-spacing: 0.05em;
-  line-height: 1.22;
+  font-size: clamp(1.15rem, 3.3vh, 2.3rem);
+  letter-spacing: 0.045em;
+  line-height: 1.2;
 }
 
 /* Bila ada anugerah, garis nama rapat sedikit ke plat */
@@ -608,9 +608,9 @@ body {
   border: 1px solid rgba(216, 180, 95, 0.46);
   background: rgba(8, 18, 33, 0.42);
   border-radius: 999px;
-  padding: 1vh 2.1vw;
-  font-size: clamp(0.82rem, 1.9vh, 1.4rem);
-  letter-spacing: 0.24em;
+  padding: 1.15vh 2.4vw;
+  font-size: clamp(1rem, 2.6vh, 1.85rem);
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: #efe6d2;
   white-space: nowrap;
