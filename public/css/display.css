@@ -318,7 +318,7 @@ body {
   position: relative;
   display: grid;
   place-items: center;
-  margin-bottom: 2.6vh;
+  margin-bottom: 0;
 }
 
 .idle-logo::before {
@@ -331,18 +331,18 @@ body {
 }
 
 .idle.logo-sederhana .idle-logo {
-  width: min(60vw, 660px);
-  height: min(38vh, 560px);
+  width: min(66vw, 900px);
+  height: min(44vh, 620px);
 }
 
 .idle.logo-besar .idle-logo {
-  width: min(76vw, 850px);
-  height: min(50vh, 760px);
+  width: min(80vw, 1150px);
+  height: min(56vh, 780px);
 }
 
 .idle.logo-penuh .idle-logo {
-  width: min(88vw, 1250px);
-  height: min(62vh, 1080px);
+  width: min(94vw, 1700px);
+  height: min(70vh, 980px);
 }
 
 .idle-logo-img {
